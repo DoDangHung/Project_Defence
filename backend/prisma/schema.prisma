@@ -1,15 +1,196 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  roleId    Int
+  role      Role     @relation(fields: [roleId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  doctor           Doctor?
+  patient          Patient?
+  notifications    Notification[]
+  feedbacks        Feedback[]
+  sentMessages     Message[]      @relation("SentMessages")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+  auditLogs        AuditLog[]
+  Admin            Admin?
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
+}
+
+model Doctor {
+  id             Int             @id @default(autoincrement())
+  userId         Int             @unique
+  departmentId   Int
+  specialization String
+  experience     Int?
+  availability   Availability[]
+  schedules      Schedule[]
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  prescriptions  Prescription[]
+  user           User            @relation(fields: [userId], references: [id])
+  department     Department      @relation(fields: [departmentId], references: [id])
+}
+
+model Patient {
+  id             Int             @id @default(autoincrement())
+  userId         Int             @unique
+  dateOfBirth    DateTime?
+  gender         String?
+  address        String?
+  appointments   Appointment[]
+  medicalRecords MedicalRecord[]
+  prescriptions  Prescription[]
+  payments       Payment[]
+  user           User            @relation(fields: [userId], references: [id])
+}
+
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  doctors     Doctor[]
+}
+
+model Schedule {
+  id        Int      @id @default(autoincrement())
+  doctorId  Int
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
+
+model Availability {
+  id        Int    @id @default(autoincrement())
+  doctorId  Int
+  dayOfWeek String
+  startTime String
+  endTime   String
+  doctor    Doctor @relation(fields: [doctorId], references: [id])
+}
+
+model Appointment {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  date      DateTime
+  status    String   @default("scheduled")
+  reason    String?
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+  payment   Payment? @relation(fields: [paymentId], references: [id])
+  paymentId Int?
+}
+
+model MedicalRecord {
+  id        Int      @id @default(autoincrement())
+  patientId Int
+  doctorId  Int
+  diagnosis String
+  notes     String?
+  createdAt DateTime @default(now())
+  patient   Patient  @relation(fields: [patientId], references: [id])
+  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+}
+
+model Prescription {
+  id           Int        @id @default(autoincrement())
+  patientId    Int
+  doctorId     Int
+  medicationId Int
+  dosage       String
+  duration     String
+  notes        String?
+  patient      Patient    @relation(fields: [patientId], references: [id])
+  doctor       Doctor     @relation(fields: [doctorId], references: [id])
+  medication   Medication @relation(fields: [medicationId], references: [id])
+}
+
+model Medication {
+  id            Int            @id @default(autoincrement())
+  name          String
+  description   String?
+  prescriptions Prescription[]
+}
+
+model Payment {
+  id          Int           @id @default(autoincrement())
+  patientId   Int
+  amount      Float
+  method      String
+  status      String        @default("pending")
+  createdAt   DateTime      @default(now())
+  patient     Patient       @relation(fields: [patientId], references: [id])
+  invoice     Invoice?
+  Appointment Appointment[]
+}
+
+model Invoice {
+  id        Int      @id @default(autoincrement())
+  paymentId Int      @unique
+  details   String?
+  createdAt DateTime @default(now())
+  payment   Payment  @relation(fields: [paymentId], references: [id])
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  content   String
+  rating    Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Message {
+  id         Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  content    String
+  sentAt     DateTime @default(now())
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+}
+
+model Admin {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  permissions String[]
+  user        User     @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
 }

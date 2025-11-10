@@ -78,3 +78,25 @@ export const updateUser = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+export const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log('deleted:', id);
+    const deletedUser = await UserModel.deleteUser(id);
+
+    if (!deletedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'User not found' });
+    }
+    res.json({
+      success: true,
+      message: 'User deleted successful',
+      data: deletedUser,
+    });
+  } catch (error) {
+    console.error('❌ Lỗi khi xoa user:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

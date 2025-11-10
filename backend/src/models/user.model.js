@@ -22,3 +22,13 @@ export const updateUser = async (id, data) => {
     include: { role: true },
   });
 };
+
+export const deleteUser = async (id) => {
+  const user = await prisma.user.findUnique({ where: { id: Number(id) } });
+  if (!user) return null;
+
+  await prisma.user.delete({
+    where: { id: Number(id) },
+  });
+  return user;
+};

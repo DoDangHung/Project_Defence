@@ -3,7 +3,7 @@ import prisma from '../config/db.js';
 
 export const getAllDoctor = async (req, res) => {
   try {
-    const doctors = await DoctorModel.getAllDoctor();
+    const doctors = await DoctorModel.getAllDoctor(req.query.departmentId);
     res.json({ success: true, data: doctors });
     console.log(doctors);
   } catch (error) {
@@ -25,7 +25,16 @@ export const getDoctorById = async (req, res) => {
 
 export const createDoctor = async (req, res) => {
   try {
-    const doctor = await DoctorModel.createDoctor(req.body);
+    const doctor = await DoctorModel.createDoctor({
+      name: req.body.name,
+      email: req.body.email,
+      password: req.body.password,
+      phone: req.body.phone,
+      specialization: req.body.specialization,
+      experience: Number(req.body.experience),
+      bio: req.body.bio,
+      departmentId: Number(req.body.departmentId),
+    });
     res.status(200).json({ success: true, data: doctor });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -44,7 +53,7 @@ export const updateDoctor = async (req, res) => {
 export const deteleDoctor = async (req, res) => {
   try {
     const doctor = await DoctorModel.deleteDoctor(req.params.id);
-    res.status(200).json({ success: true, data: doctor });
+    res.status(200).json({ success: true, message: 'Doctor deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

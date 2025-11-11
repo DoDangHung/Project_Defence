@@ -1,33 +1,36 @@
 import prisma from '../config/db.js';
 
-export const getAllDoctor = async () => {
+export const getAllDoctor = async (departmentId) => {
+  const doctors = departmentId ? { departmentId: Number(departmentId) } : {};
   return prisma.doctor.findMany({
-    include: { user: true, department: true },
+    doctors,
+    include: { department: true },
   });
 };
 
 export const getDoctorById = async () => {
   return prisma.doctor.findUnique({
     where: { id: Number(id) },
-    include: { user: true, department: true },
+    include: { department: true, schedules: true, appointments: true },
   });
 };
 export const createDoctor = async (data) => {
   return prisma.doctor.create({
     data,
-    include: { user: true, department: true },
+    include: { department: true },
   });
 };
 
 export const updateDoctor = async (id, data) => {
-  return prisma.doctor.findUnique({
+  return prisma.doctor.update({
     where: { id: Number(id) },
     data,
+    include: { department: true },
   });
 };
 
 export const deleteDoctor = async (id) => {
-  return prisma.doctor.findUnique({
+  return prisma.doctor.delete({
     where: { id: Number(id) },
   });
 };

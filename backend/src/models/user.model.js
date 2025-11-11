@@ -1,15 +1,24 @@
 import prisma from '../config/db.js';
 
 export const getAllUsers = async () => {
-  return prisma.user.findMany();
+  return prisma.user.findMany({
+    include: {
+      role: true,
+      patient: true,
+      admin: true,
+    },
+  });
 };
 
 export const createUser = async (data) => {
-  return prisma.user.create({ data });
+  return prisma.user.create({ data, include: { role: true } });
 };
 
-export const getUserByEmail = async (email) => {
-  return prisma.user.findUnique({ where: { email } });
+export const getUserById = async (id) => {
+  return prisma.user.findUnique({
+    where: { id: Number(id) },
+    include: { role: true, patient: true, admin: true },
+  });
 };
 
 export const updateUser = async (id, data) => {

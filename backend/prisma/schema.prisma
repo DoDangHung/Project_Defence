@@ -24,8 +24,6 @@ model User {
   password    String
   phone       String?
   gender      String?
-  dateOfBirth DateTime?
-  avatar      String?
   roleId      Int
   role        Role      @relation(fields: [roleId], references: [id])
 

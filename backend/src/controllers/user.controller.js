@@ -13,7 +13,7 @@ export const getUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    const { name, email, password, phone, gender, role } = req.body;
 
     // Tìm role tương ứng trong bảng Role
     const existingRole = await prisma.role.findUnique({
@@ -34,6 +34,8 @@ export const createUser = async (req, res) => {
         email,
         password,
         phone,
+        gender,
+
         role: {
           connect: { id: existingRole.id },
         },
@@ -50,16 +52,15 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, password, phone, roleId } = req.body;
+    const { name, password, phone, gender } = req.body;
 
     console.log('📩 Dữ liệu cần cập nhật:', req.body);
 
     const updatedUser = await UserModel.updateUser(id, {
       name,
-      email,
       password,
       phone,
-      roleId,
+      gender,
     });
 
     if (!updatedUser) {

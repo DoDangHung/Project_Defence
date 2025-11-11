@@ -7,26 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
-  phone     String?
-  roleId    Int
-  role      Role     @relation(fields: [roleId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  doctor           Doctor?
-  patient          Patient?
-  notifications    Notification[]
-  feedbacks        Feedback[]
-  sentMessages     Message[]      @relation("SentMessages")
-  receivedMessages Message[]      @relation("ReceivedMessages")
-  auditLogs        AuditLog[]
-  Admin            Admin?
-}
+// ====================================
+// ROLE & USER MODELS
+// ====================================
 
 model Role {
   id    Int    @id @default(autoincrement())
@@ -34,140 +17,215 @@ model Role {
   users User[]
 }
 
-model Doctor {
-  id             Int             @id @default(autoincrement())
-  userId         Int             @unique
-  departmentId   Int
-  specialization String
-  experience     Int?
-  availability   Availability[]
-  schedules      Schedule[]
-  appointments   Appointment[]
-  medicalRecords MedicalRecord[]
-  prescriptions  Prescription[]
-  user           User            @relation(fields: [userId], references: [id])
-  department     Department      @relation(fields: [departmentId], references: [id])
+model User {
+  id          Int       @id @default(autoincrement())
+  name        String
+  email       String    @unique
+  password    String
+  phone       String?
+  gender      String?
+  dateOfBirth DateTime?
+  avatar      String?
+  roleId      Int
+  role        Role      @relation(fields: [roleId], references: [id])
+
+  admin            Admin?
+  patient          Patient?
+  notifications    Notification[]
+  sentMessages     Message[]      @relation("SentMessages")
+  receivedMessages Message[]      @relation("ReceivedMessages")
+  auditLogs        AuditLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
+// ====================================
+// ADMIN MODEL
+// ====================================
+
+model Admin {
+  id       Int     @id @default(autoincrement())
+  userId   Int     @unique
+  position String?
+
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ====================================
+// PATIENT MODEL
+// ====================================
 
 model Patient {
   id             Int             @id @default(autoincrement())
   userId         Int             @unique
-  dateOfBirth    DateTime?
-  gender         String?
   address        String?
   appointments   Appointment[]
   medicalRecords MedicalRecord[]
   prescriptions  Prescription[]
   payments       Payment[]
-  user           User            @relation(fields: [userId], references: [id])
+
+  user      User       @relation(fields: [userId], references: [id])
+  feedbacks Feedback[]
 }
+
+// ====================================
+// DEPARTMENT & DOCTOR MODELS
+// ====================================
 
 model Department {
   id          Int      @id @default(autoincrement())
-  name        String   @unique
+  name        String
   description String?
   doctors     Doctor[]
 }
 
-model Schedule {
-  id        Int      @id @default(autoincrement())
-  doctorId  Int
-  date      DateTime
-  startTime DateTime
-  endTime   DateTime
-  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+model Doctor {
+  id             Int     @id @default(autoincrement())
+  name           String
+  email          String  @unique
+  password       String
+  phone          String?
+  specialization String
+  experience     Int?
+  bio            String?
+  rating         Float?  @default(0.0)
+  departmentId   Int
+
+  department     Department      @relation(fields: [departmentId], references: [id])
+  schedules      Schedule[]
+  appointments   Appointment[]
+  feedbacks      Feedback[]
+  medicalRecords MedicalRecord[]
+  prescriptions  Prescription[]
+  availability   Availability[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
+// ====================================
+// AVAILABILITY MODEL
+// ====================================
 
 model Availability {
   id        Int    @id @default(autoincrement())
   doctorId  Int
-  dayOfWeek String
+  day       String
   startTime String
   endTime   String
-  doctor    Doctor @relation(fields: [doctorId], references: [id])
+
+  doctor Doctor @relation(fields: [doctorId], references: [id])
+}
+
+// ====================================
+// SCHEDULE & APPOINTMENT MODELS
+// ====================================
+
+model Schedule {
+  id          Int      @id @default(autoincrement())
+  doctorId    Int
+  date        DateTime
+  startTime   DateTime
+  endTime     DateTime
+  isAvailable Boolean  @default(true)
+
+  doctor       Doctor        @relation(fields: [doctorId], references: [id])
+  appointments Appointment[]
 }
 
 model Appointment {
-  id        Int      @id @default(autoincrement())
-  patientId Int
-  doctorId  Int
-  date      DateTime
-  status    String   @default("scheduled")
-  reason    String?
-  patient   Patient  @relation(fields: [patientId], references: [id])
-  doctor    Doctor   @relation(fields: [doctorId], references: [id])
-  payment   Payment? @relation(fields: [paymentId], references: [id])
-  paymentId Int?
+  id         Int      @id @default(autoincrement())
+  patientId  Int
+  doctorId   Int
+  scheduleId Int
+  date       DateTime
+  reason     String?
+  status     String   @default("pending")
+
+  patient  Patient  @relation(fields: [patientId], references: [id])
+  doctor   Doctor   @relation(fields: [doctorId], references: [id])
+  schedule Schedule @relation(fields: [scheduleId], references: [id])
+
+  feedback Feedback? @relation("AppointmentFeedback")
+  payment  Payment?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
+
+// ====================================
+// FEEDBACK MODEL
+// ====================================
+
+model Feedback {
+  id            Int     @id @default(autoincrement())
+  patientId     Int
+  doctorId      Int
+  appointmentId Int?    @unique // ✅ thêm @unique
+  rating        Int
+  comment       String?
+
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  doctor      Doctor       @relation(fields: [doctorId], references: [id])
+  appointment Appointment? @relation("AppointmentFeedback", fields: [appointmentId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ====================================
+// PAYMENT MODEL
+// ====================================
+
+model Payment {
+  id            Int       @id @default(autoincrement())
+  appointmentId Int       @unique
+  patientId     Int
+  amount        Float
+  method        String
+  status        String    @default("pending")
+  transactionId String?
+  paidAt        DateTime?
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id])
+  patient     Patient     @relation(fields: [patientId], references: [id])
+}
+
+// ====================================
+// MEDICAL RECORD & PRESCRIPTION MODELS
+// ====================================
 
 model MedicalRecord {
   id        Int      @id @default(autoincrement())
-  patientId Int
   doctorId  Int
+  patientId Int
   diagnosis String
+  treatment String?
   notes     String?
-  createdAt DateTime @default(now())
-  patient   Patient  @relation(fields: [patientId], references: [id])
-  doctor    Doctor   @relation(fields: [doctorId], references: [id])
+  date      DateTime @default(now())
+
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 }
 
 model Prescription {
-  id           Int        @id @default(autoincrement())
-  patientId    Int
+  id           Int      @id @default(autoincrement())
   doctorId     Int
-  medicationId Int
+  patientId    Int
+  medication   String
   dosage       String
-  duration     String
-  notes        String?
-  patient      Patient    @relation(fields: [patientId], references: [id])
-  doctor       Doctor     @relation(fields: [doctorId], references: [id])
-  medication   Medication @relation(fields: [medicationId], references: [id])
+  instructions String?
+  createdAt    DateTime @default(now())
+
+  doctor  Doctor  @relation(fields: [doctorId], references: [id])
+  patient Patient @relation(fields: [patientId], references: [id])
 }
 
-model Medication {
-  id            Int            @id @default(autoincrement())
-  name          String
-  description   String?
-  prescriptions Prescription[]
-}
-
-model Payment {
-  id          Int           @id @default(autoincrement())
-  patientId   Int
-  amount      Float
-  method      String
-  status      String        @default("pending")
-  createdAt   DateTime      @default(now())
-  patient     Patient       @relation(fields: [patientId], references: [id])
-  invoice     Invoice?
-  Appointment Appointment[]
-}
-
-model Invoice {
-  id        Int      @id @default(autoincrement())
-  paymentId Int      @unique
-  details   String?
-  createdAt DateTime @default(now())
-  payment   Payment  @relation(fields: [paymentId], references: [id])
-}
-
-model Notification {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  message   String
-  isRead    Boolean  @default(false)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-}
-
-model Feedback {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  content   String
-  rating    Int
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-}
+// ====================================
+// MESSAGE, NOTIFICATION, AUDIT LOG
+// ====================================
 
 model Message {
   id         Int      @id @default(autoincrement())
@@ -175,22 +233,29 @@ model Message {
   receiverId Int
   content    String
   sentAt     DateTime @default(now())
-  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
-  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  sender   User @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
 }
 
-model Admin {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @unique
-  permissions String[]
-  user        User     @relation(fields: [userId], references: [id])
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model AuditLog {
   id        Int      @id @default(autoincrement())
   userId    Int?
   action    String
+  entity    String
   details   String?
   createdAt DateTime @default(now())
-  user      User?    @relation(fields: [userId], references: [id])
+
+  user User? @relation(fields: [userId], references: [id])
 }

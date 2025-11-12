@@ -11,6 +11,15 @@ export const getAllDoctor = async (req, res) => {
   }
 };
 
+export const getDoctor = async (req, res) => {
+  try {
+    const { departmentId } = req.query;
+    const doctors = await DoctorModel.getAllDoctor(departmentId);
+    res.json({ success: true, data: doctors });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 export const getDoctorById = async (req, res) => {
   try {
     const doctors = await DoctorModel.getDoctorById(req.params.id);
@@ -53,7 +62,7 @@ export const updateDoctor = async (req, res) => {
 export const deteleDoctor = async (req, res) => {
   try {
     const doctor = await DoctorModel.deleteDoctor(req.params.id);
-    res.status(200).json({ success: true, message: 'Doctor deleted' });
+    res.status(200).json({ success: true, data: doctor });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

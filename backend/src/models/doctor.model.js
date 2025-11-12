@@ -1,9 +1,9 @@
 import prisma from '../config/db.js';
 
 export const getAllDoctor = async (departmentId) => {
-  const doctors = departmentId ? { departmentId: Number(departmentId) } : {};
+  const where = departmentId ? { departmentId: Number(departmentId) } : {};
   return prisma.doctor.findMany({
-    doctors,
+    where,
     include: { department: true },
   });
 };
@@ -14,6 +14,7 @@ export const getDoctorById = async () => {
     include: { department: true, schedules: true, appointments: true },
   });
 };
+
 export const createDoctor = async (data) => {
   return prisma.doctor.create({
     data,

@@ -90,9 +90,9 @@ model Doctor {
   experience     Int?
   bio            String?
   rating         Float?  @default(0.0)
-  departmentId   Int
+  departmentId   Int?
 
-  department     Department      @relation(fields: [departmentId], references: [id])
+  department     Department? @relation(fields: [departmentId], references: [id])
   schedules      Schedule[]
   appointments   Appointment[]
   feedbacks      Feedback[]

@@ -39,12 +39,27 @@ export const createDepartment = async (req, res) => {
   }
 };
 
-export const updateDepartment = async (res, req) => {};
+export const updateDepartment = async (req, res) => {
+  try {
+    const updatedDepart = await DepartmentModel.updateDepartment(
+      id,
+      req.body.id
+    );
+    res.status(200).json({ success: true, data: updatedDepart });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 
 export const deleteDepartment = async (req, res) => {
   try {
-    const deletedDepart = await DepartmentModel.deleteDepartment(req.params.id);
-    returnres.status(200).json({ success: true, data: deletedDepart });
+    const { id } = req.params;
+    await prisma.doctor.updateMany({
+      where: { departmentId: Number(id) },
+      data: { departmentId: { set: null } },
+    });
+    const deletedDepart = await DepartmentModel.deleteDepartment(id);
+    return res.status(200).json({ success: true, data: deletedDepart });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

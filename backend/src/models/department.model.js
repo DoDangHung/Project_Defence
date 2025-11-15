@@ -15,13 +15,6 @@ export const getAllDepartment = async (doctorId) => {
   });
 };
 
-export const getDoctorsByDepartment = async (departmentId) => {
-  return prisma.doctor.findMany({
-    where: { departmentId: Number(departmentId) },
-    include: { department: true },
-  });
-};
-
 export const createDepartment = async (data) => {
   return prisma.department.create({
     data,

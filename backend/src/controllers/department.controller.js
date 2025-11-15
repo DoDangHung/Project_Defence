@@ -86,14 +86,6 @@ export const updateDepartment = async (req, res) => {
   }
 };
 
-export const getDoctorsByDepartment = async (req, res) => {
-  try {
-    const { id } = req.params;
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
 export const deleteDepartment = async (req, res) => {
   try {
     const { id } = req.params;

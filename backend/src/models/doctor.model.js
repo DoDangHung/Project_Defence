@@ -8,10 +8,17 @@ export const getAllDoctor = async (departmentId) => {
   });
 };
 
-export const getDoctorById = async () => {
+export const getDoctorById = async (id) => {
   return prisma.doctor.findUnique({
     where: { id: Number(id) },
     include: { department: true, schedules: true, appointments: true },
+  });
+};
+
+export const getDoctorsByDepartment = async (departmentId) => {
+  return prisma.doctor.findMany({
+    where: { departmentId: Number(departmentId) },
+    include: { department: true },
   });
 };
 

@@ -41,11 +41,54 @@ export const createDepartment = async (req, res) => {
 
 export const updateDepartment = async (req, res) => {
   try {
-    const updatedDepart = await DepartmentModel.updateDepartment(
-      id,
-      req.body.id
-    );
+    const { id } = req.params;
+    const { name, description, doctorIds } = req.body;
+    const existingDept = await prisma.department.findUnique({
+      where: { id: Number(id) },
+    });
+    if (!existingDept) {
+      return res.status(404).json({
+        success: false,
+        message: 'Department not found',
+      });
+    }
+    // 1. Update info of department
+    await prisma.department.update({
+      where: { id: Number(id) },
+      data: { name, description },
+    });
+
+    // 2. Remove all doctors from this department
+    await prisma.doctor.updateMany({
+      where: { departmentId: Number(id) },
+      data: { departmentId: { set: null } },
+    });
+
+    // 3. Assign new doctor list
+    if (doctorIds && doctorIds.length > 0) {
+      await prisma.doctor.updateMany({
+        where: {
+          id: { in: doctorIds.map(Number) },
+        },
+        data: { departmentId: Number(id) },
+      });
+    }
+
+    // 4. Get updated department including doctors
+    const updatedDepart = await prisma.department.findUnique({
+      where: { id: Number(id) },
+      include: { doctors: true },
+    });
     res.status(200).json({ success: true, data: updatedDepart });
+  } catch (err) {
+    console.log('❌ Error updating department:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const getDoctorsByDepartment = async (req, res) => {
+  try {
+    const { id } = req.params;
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

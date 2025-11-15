@@ -33,7 +33,6 @@ export const updateDepartment = async (id, data) => {
   return prisma.department.update({
     where: { id: Number(id) },
     data,
-    include: { doctors: true },
   });
 };
 

@@ -4,6 +4,7 @@ import * as DoctorController from '../controllers/doctor.controller.js';
 const router = express.Router();
 
 router.get('/', DoctorController.getAllDoctor);
+router.get('/search', DoctorController.searchDoctorsCtrl);
 router.get('/:id', DoctorController.getDoctorById);
 router.get('/by-department/:id', DoctorController.getDoctorsByDepartment);
 router.post('/', DoctorController.createDoctor);

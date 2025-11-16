@@ -23,12 +23,18 @@ export const getAllDoctor = async (req, res) => {
 
 export const getDoctorById = async (req, res) => {
   try {
-    const doctor = await DoctorModel.getDoctorById(req.params.id);
-    if (!doctor)
-      return res
-        .status(404)
-        .json({ success: false, message: 'Doctor not found' });
-    res.json({ success: true, data: doctor });
+    const { id } = req.params;
+    console.log('getDoctorById hit, params:', req.params);
+    const doctor = await DoctorModel.getDoctorById(id);
+
+    if (!doctor) {
+      return res.status(404).json({
+        success: false,
+        message: 'Doctor not found',
+      });
+    }
+
+    return res.json({ success: true, data: doctor });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -83,6 +89,39 @@ export const getDoctorsByDepartment = async (req, res) => {
     return res.status(200).json({ success: true, data: doctors });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const searchDoctorsCtrl = async (req, res) => {
+  try {
+    const {
+      q,
+      departmentId,
+      specialization,
+      minExperience,
+      minRating,
+      page = 1,
+      limit = 10,
+      sortBy = 'rating',
+      order = 'desc',
+    } = req.query;
+    console.log('hit deparment name: ', req.query);
+    const result = await DoctorModel.searchDoctors({
+      q,
+      departmentId,
+      specialization,
+      minExperience,
+      minRating,
+      page,
+      limit,
+      sortBy,
+      order,
+    });
+
+    return res.status(200).json({ success: true, data: result });
+  } catch (err) {
+    console.error('searchDoctorsCtrl error:', err);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 

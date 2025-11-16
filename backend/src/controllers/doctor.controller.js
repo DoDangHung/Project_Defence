@@ -105,7 +105,7 @@ export const searchDoctorsCtrl = async (req, res) => {
       sortBy = 'rating',
       order = 'desc',
     } = req.query;
-    console.log('hit deparment name: ', req.query);
+    console.log('hit deparment page & limit: ', req.query);
     const result = await DoctorModel.searchDoctors({
       q,
       departmentId,

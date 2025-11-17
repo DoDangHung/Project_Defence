@@ -2,8 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotnev from 'dotenv';
 import userRoutes from './routes/user.routes.js';
-import doctorRoutes from './routes/doctor.routes.js';
-import departmentRoutes from './routes/department.routes.js';
+import doctorRoutes from './modules/doctors/doctor.routes.js';
+import departmentRoutes from './modules/departments/department.routes.js';
 dotnev.config();
 const app = express();
 

@@ -1,5 +1,5 @@
-import * as DoctorModel from '../models/doctor.model.js';
-import prisma from '../config/db.js';
+import * as DoctorModel from '../doctors/doctor.service.js';
+import prisma from '../../config/db.js';
 
 export const getAllDoctor = async (req, res) => {
   try {

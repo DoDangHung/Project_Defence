@@ -4,6 +4,7 @@ import dotnev from 'dotenv';
 import userRoutes from './routes/user.routes.js';
 import doctorRoutes from './modules/doctors/doctor.routes.js';
 import departmentRoutes from './modules/departments/department.routes.js';
+import schedulesRoutes from './modules/schedules/schedules.routes.js';
 dotnev.config();
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/doctors', doctorRoutes);
 app.use('/api/departments', departmentRoutes);
+app.use('/api/schedules', schedulesRoutes);
 app.get('/', (req, res) => {
   res.send('HealthCare API is running');
 });

@@ -111,9 +111,14 @@ model Doctor {
 model Availability {
   id        Int    @id @default(autoincrement())
   doctorId  Int
-  day       String
-  startTime String
-  endTime   String
+
+
+  date      DateTime?
+  start     DateTime?
+  end       DateTime?
+
+
+
 
   doctor Doctor @relation(fields: [doctorId], references: [id])
 }

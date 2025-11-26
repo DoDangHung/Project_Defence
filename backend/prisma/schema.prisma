@@ -18,14 +18,14 @@ model Role {
 }
 
 model User {
-  id          Int       @id @default(autoincrement())
-  name        String
-  email       String    @unique
-  password    String
-  phone       String?
-  gender      String?
-  roleId      Int
-  role        Role      @relation(fields: [roleId], references: [id])
+  id       Int     @id @default(autoincrement())
+  name     String
+  email    String  @unique
+  password String
+  phone    String?
+  gender   String?
+  roleId   Int
+  role     Role    @relation(fields: [roleId], references: [id])
 
   admin            Admin?
   patient          Patient?
@@ -92,7 +92,7 @@ model Doctor {
   rating         Float?  @default(0.0)
   departmentId   Int?
 
-  department     Department? @relation(fields: [departmentId], references: [id])
+  department     Department?     @relation(fields: [departmentId], references: [id])
   schedules      Schedule[]
   appointments   Appointment[]
   feedbacks      Feedback[]
@@ -109,18 +109,12 @@ model Doctor {
 // ====================================
 
 model Availability {
-  id        Int    @id @default(autoincrement())
-  doctorId  Int
-
-
-  date      DateTime?
-  start     DateTime?
-  end       DateTime?
-
-
-
-
-  doctor Doctor @relation(fields: [doctorId], references: [id])
+  id       Int       @id @default(autoincrement())
+  doctorId Int
+  date     DateTime?
+  start    DateTime?
+  end      DateTime?
+  doctor   Doctor    @relation(fields: [doctorId], references: [id])
 }
 
 // ====================================
@@ -143,14 +137,16 @@ model Appointment {
   id         Int      @id @default(autoincrement())
   patientId  Int
   doctorId   Int
-  scheduleId Int
+  scheduleId Int?
   date       DateTime
+  startTime  DateTime
+  endTime    DateTime
   reason     String?
   status     String   @default("pending")
 
-  patient  Patient  @relation(fields: [patientId], references: [id])
-  doctor   Doctor   @relation(fields: [doctorId], references: [id])
-  schedule Schedule @relation(fields: [scheduleId], references: [id])
+  patient  Patient   @relation(fields: [patientId], references: [id])
+  doctor   Doctor    @relation(fields: [doctorId], references: [id])
+  schedule Schedule? @relation(fields: [scheduleId], references: [id])
 
   feedback Feedback? @relation("AppointmentFeedback")
   payment  Payment?

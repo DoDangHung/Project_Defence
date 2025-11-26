@@ -13,21 +13,41 @@ export const getUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, phone, gender, role } = req.body;
+    const { name, email, password, phone, gender, role, roleId } = req.body;
 
-    // Tìm role tương ứng trong bảng Role
-    const existingRole = await prisma.role.findUnique({
-      where: { name: role },
-    });
+    let existingRole = null;
 
-    if (!existingRole) {
-      return res.status(400).json({
-        success: false,
-        message: `Role '${role}' does not exist. Please create it first.`,
+    // ƯU TIÊN roleId
+    if (roleId) {
+      existingRole = await prisma.role.findUnique({
+        where: { id: Number(roleId) },
       });
     }
 
-    // Tạo user với quan hệ role
+    // Nếu không có roleId thì tìm theo roleName
+    else if (role) {
+      existingRole = await prisma.role.findUnique({
+        where: { name: role },
+      });
+    }
+
+    // Nếu không có roleId & không có role
+    else {
+      return res.status(400).json({
+        success: false,
+        message: 'roleId or role (roleName) is required.',
+      });
+    }
+
+    // Nếu role không tồn tại trong DB
+    if (!existingRole) {
+      return res.status(400).json({
+        success: false,
+        message: 'Role does not exist.',
+      });
+    }
+
+    // Tạo user
     const user = await prisma.user.create({
       data: {
         name,
@@ -35,14 +55,11 @@ export const createUser = async (req, res) => {
         password,
         phone,
         gender,
-
-        role: {
-          connect: { id: existingRole.id },
-        },
+        roleId: existingRole.id,
       },
       include: { role: true },
     });
-    console.log(user);
+
     res.status(201).json({ success: true, data: user });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

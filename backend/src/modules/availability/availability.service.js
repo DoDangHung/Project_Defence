@@ -38,6 +38,27 @@ export const availabilityService = {
     });
   },
 
+  cancel: async (id, reason) => {
+    const appointment = await prisma.availability.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!appointment) {
+      throw new Error('Appointment not found');
+    }
+
+    if (appointment.status === 'cancelled') {
+      throw new Error('Appointment already cancelled');
+    }
+
+    return prisma.appointment.update({
+      where: {
+        id: Number(id),
+        data: { status: 'cancelled' },
+      },
+    });
+  },
+
   delete: async (id) => {
     return prisma.availability.delete({
       where: { id: Number(id) },

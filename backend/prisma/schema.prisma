@@ -178,18 +178,77 @@ model Feedback {
 // PAYMENT MODEL
 // ====================================
 
-model Payment {
-  id            Int       @id @default(autoincrement())
-  appointmentId Int       @unique
-  patientId     Int
-  amount        Float
-  method        String
-  status        String    @default("pending")
-  transactionId String?
-  paidAt        DateTime?
+// ====================================
+// PAYMENT MODEL - Updated for Hybrid Payment System
+// ====================================
 
-  appointment Appointment @relation(fields: [appointmentId], references: [id])
+model Payment {
+  id            Int      @id @default(autoincrement())
+  appointmentId Int      @unique
+  patientId     Int
+  
+  // Phí khám
+  consultationFee  Float   // Phí khám gốc
+  depositAmount    Float   // Tiền đặt cọc (30-50% consultationFee)
+  remainingAmount  Float   // Còn phải trả
+  totalPaid        Float   @default(0) // Tổng đã thanh toán
+  
+  // Trạng thái thanh toán
+  depositStatus    String  @default("pending") // pending, paid, refunded, failed
+  paymentStatus    String  @default("pending") // pending, partial, completed, refunded
+  
+  // Transaction IDs
+  depositTransactionId  String? // ID giao dịch đặt cọc
+  finalTransactionId    String? // ID giao dịch thanh toán cuối
+  
+  // Phương thức thanh toán
+  paymentMethod    String? // stripe, payos, cash, free_booking
+  paymentProvider  String? // stripe, payos (để phân biệt gateway)
+  
+  // Thông tin gateway
+  stripePaymentIntentId String? // Stripe Payment Intent ID
+  payosOrderId          String? // PayOS Order ID
+  
+  // Chi phí phát sinh (thuốc, xét nghiệm...)
+  additionalCharges Json?  @default("[]") // [{service: "Xét nghiệm", amount: 150000, status: "paid"}]
+  
+  // Refund policy
+  refundAmount     Float?  @default(0) // Số tiền đã hoàn
+  refundReason     String? // Lý do hoàn tiền
+  refundedAt       DateTime?
+  
+  // Timestamps
+  depositPaidAt    DateTime?
+  finalPaidAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  
+  // Relations
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   patient     Patient     @relation(fields: [patientId], references: [id])
+  
+  @@index([patientId])
+  @@index([paymentStatus])
+  @@index([depositStatus])
+}
+
+// ====================================
+// PAYMENT TRANSACTION LOG (Optional - for audit)
+// ====================================
+
+model PaymentTransaction {
+  id              Int      @id @default(autoincrement())
+  paymentId       Int
+  transactionType String   // deposit, final_payment, refund, additional_charge
+  amount          Float
+  status          String   // success, failed, pending
+  provider        String   // stripe, payos, cash
+  transactionId   String?  // External transaction ID
+  metadata        Json?    // Extra info from gateway
+  createdAt       DateTime @default(now())
+  
+  @@index([paymentId])
+  @@index([transactionId])
 }
 
 // ====================================

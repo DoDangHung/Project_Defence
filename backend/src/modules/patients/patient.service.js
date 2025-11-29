@@ -1,52 +1,74 @@
 import prisma from '../../config/db.js';
 
 export const patientService = {
-  book: async ({ patientId, doctorId, date, startTime, endTime, reason }) => {
+  getProfile: async (patientId) => {
     const patient = await prisma.patient.findUnique({
       where: { id: Number(patientId) },
-    });
-    if (!patient) throw new Error('Patient does not exist');
-
-    const dateObj = new Date(date);
-    const start = new Date(startTime);
-    const end = new Date(endTime);
-
-    if (isNaN(dateObj) || isNaN(start) || isNaN(end)) {
-      throw new Error('Invalid date format');
-    }
-
-    const patientConflict = await prisma.appointment.findFirst({
-      where: {
-        patientId: Number(patientId),
-        date: dateObj,
-        AND: [{ startTime: { lt: end } }, { endTime: { gt: start } }],
+      include: {
+        user: true,
       },
     });
-    if (patientConflict) {
-      throw new Error('Patient already has an appointment in this timeslot');
-    }
+    if (!patient) throw new Error('Patient not found');
+    return patient;
+  },
 
-    const doctorConflict = await prisma.appointment.findFirst({
+  updateProfile: async (patientId, data) => {
+    const patient = await prisma.patient.findUnique({
       where: {
-        doctorId: Number(doctorId),
-        date: dateObj,
-        AND: [{ startTime: { lt: end } }, { endTime: { gt: start } }],
+        id: Number(patientId),
       },
     });
-    if (doctorConflict) {
-      throw new Error('This slot has already been booked');
-    }
-
-    return prisma.appointment.create({
+    if (!patient) throw new Error('Patient not found');
+    return prisma.patient.update({
+      where: { id: Number(patientId) },
       data: {
-        patientId: Number(patientId),
-        doctorId: Number(doctorId),
-        date: dateObj,
-        startTime: start,
-        endTime: end,
-        reason,
-        status: 'pending',
+        address: data.address || patient.address,
       },
+    });
+  },
+
+  getAppointments: async (patientId) => {
+    return prisma.appointment.findMany({
+      where: { patientId: Number(patientId) },
+      include: { doctor: true },
+      orderBy: { startTime: 'asc' },
+    });
+  },
+
+  getUpcomingAppointments: async (patientId) => {
+    const now = new Date();
+
+    return prisma.appointment.findMany({
+      where: {
+        patientId: Number(patientId),
+        startTime: { gte: now },
+        status: { not: 'cancelled' },
+      },
+      include: { doctor: true },
+      orderBy: { startTime: 'asc' },
+    });
+  },
+
+  getPastAppointments: async (patientId) => {
+    const now = new Date();
+
+    return prisma.appointment.findMany({
+      where: {
+        patientId: Number(patientId),
+        endTime: { lt: now },
+      },
+      include: {
+        doctor: true,
+      },
+      orderBy: { endTime: 'desc' },
+    });
+  },
+
+  getPayments: async (patientId) => {
+    return prisma.payment.findMany({
+      where: { appointment: { patientId: Number(patientId) } },
+      include: { appointment: true },
+      orderBy: { createdAt: 'desc' },
     });
   },
 };

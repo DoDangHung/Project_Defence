@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import AdminSidebar from './components/layouts/AdminSidebar.jsx';
-import AdminHeader from './components/layouts/AdminHeader.jsx';
-import DashboardContent from './components/dashboard/DashboardContent.jsx';
-import TableContent from './components/table/TableContent.jsx';
+import AdminSidebar from '../../components/layouts/AdminSidebar.jsx';
+import AdminHeader from '../../components/layouts/AdminHeader.jsx';
+import DashboardContent from '../../components/dashboard/DashboardContent.jsx';
+import TableContent from '../../components/table/TableContent.jsx';
 
-const App = () => {
+const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -192,4 +192,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default Dashboard;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -18,14 +19,14 @@ import {
   ChevronRight,
 } from 'lucide-react';
 
-const AdminSidebar = ({
+export default function AdminSidebar({
   sidebarOpen,
   setSidebarOpen,
-  activeTab,
-  setActiveTab,
   mobileMenuOpen,
   setMobileMenuOpen,
-}) => {
+}) {
+  const location = useLocation();
+
   const menuItems = [
     { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { id: 'users', icon: Users, label: 'Users' },
@@ -55,6 +56,7 @@ const AdminSidebar = ({
         }
       `}
     >
+      {/* Toggle button */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="hidden lg:flex absolute -right-3 top-6 bg-blue-600 text-white p-1.5 rounded-full shadow-lg hover:bg-blue-700 transition-colors z-10"
@@ -62,6 +64,7 @@ const AdminSidebar = ({
         {sidebarOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
       </button>
 
+      {/* Mobile close button */}
       <button
         onClick={() => setMobileMenuOpen(false)}
         className="lg:hidden absolute right-4 top-4 p-2 hover:bg-blue-600 rounded-lg transition-colors"
@@ -69,44 +72,49 @@ const AdminSidebar = ({
         <X size={20} />
       </button>
 
+      {/* Logo */}
       <div className="p-6 border-b border-blue-600">
-        <h1 className={`font-bold text-xl ${!sidebarOpen && 'hidden'}`}>
-          🏥 Admin Panel
-        </h1>
-        <p className={`text-blue-200 text-sm mt-1 ${!sidebarOpen && 'hidden'}`}>
-          Hospital Management
-        </p>
-        {!sidebarOpen && <div className="text-2xl text-center">🏥</div>}
+        {sidebarOpen ? (
+          <>
+            <h1 className="font-bold text-xl">🏥 Admin Panel</h1>
+            <p className="text-blue-200 text-sm mt-1">Hospital Management</p>
+          </>
+        ) : (
+          <div className="text-2xl text-center">🏥</div>
+        )}
       </div>
 
+      {/* Menu */}
       <nav className="flex-1 py-6 overflow-y-auto">
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => {
-              setActiveTab(item.id);
-              setMobileMenuOpen(false);
-            }}
-            className={`w-full flex items-center gap-3 px-6 py-3 transition-all ${
-              activeTab === item.id
-                ? 'bg-blue-600 border-l-4 border-white'
-                : 'hover:bg-blue-600/50'
-            }`}
-          >
-            <item.icon size={20} />
-            {sidebarOpen && (
-              <span className="text-sm font-medium">{item.label}</span>
-            )}
-          </button>
-        ))}
+        {menuItems.map((item) => {
+          const menuPath = `/admin/${item.id}`;
+          const isActive = location.pathname.startsWith(menuPath);
+
+          return (
+            <Link
+              key={item.id}
+              to={menuPath}
+              onClick={() => setMobileMenuOpen(false)}
+              className={`w-full flex items-center gap-3 px-6 py-3 transition-all ${
+                isActive
+                  ? 'bg-blue-600 border-l-4 border-white'
+                  : 'hover:bg-blue-600/50'
+              }`}
+            >
+              <item.icon size={20} />
+              {sidebarOpen && (
+                <span className="text-sm font-medium">{item.label}</span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
+      {/* Logout */}
       <button className="flex items-center gap-3 px-6 py-4 border-t border-blue-600 hover:bg-blue-600/50 transition-colors">
         <LogOut size={20} />
         {sidebarOpen && <span className="text-sm font-medium">Logout</span>}
       </button>
     </div>
   );
-};
-
-export default AdminSidebar;
+}

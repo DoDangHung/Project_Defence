@@ -1,7 +1,12 @@
 import React from 'react';
 import { Search, Filter, Download, Plus } from 'lucide-react';
 
-const TableContent = ({ title, columns, data }) => {
+const TableContent = ({ title, columns, data, onView, onEdit, onDelete }) => {
+  // ✅ THÊM: Kiểm tra và đảm bảo data luôn là array
+  const safeData = Array.isArray(data) ? data : [];
+  console.log('TableContent received:', data);
+  console.log('Type:', typeof data);
+  console.log('Is Array:', Array.isArray(data));
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100">
       <div className="p-4 lg:p-6 border-b border-gray-100">
@@ -9,7 +14,7 @@ const TableContent = ({ title, columns, data }) => {
           <h3 className="text-base lg:text-lg font-bold text-gray-900">
             {title}
           </h3>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors text-sm">
+          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors text-sm cursor-pointer">
             <Plus size={18} />
             Add New
           </button>
@@ -27,11 +32,11 @@ const TableContent = ({ title, columns, data }) => {
             />
           </div>
           <div className="flex gap-3">
-            <button className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            <button className="flex-1 cursor-pointer lg:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm">
               <Filter size={18} />
               <span className="hidden sm:inline">Filter</span>
             </button>
-            <button className="flex-1 lg:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+            <button className="flex-1 cursor-pointer lg:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm">
               <Download size={18} />
               <span className="hidden sm:inline">Export</span>
             </button>
@@ -56,29 +61,50 @@ const TableContent = ({ title, columns, data }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {data.map((row, idx) => (
-              <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                {Object.values(row).map((cell, cellIdx) => (
-                  <td
-                    key={cellIdx}
-                    className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700"
-                  >
-                    {cell}
-                  </td>
-                ))}
-                <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-xs lg:text-sm">
-                  <button className="text-blue-600 hover:text-blue-800 mr-2 lg:mr-3">
-                    View
-                  </button>
-                  <button className="text-green-600 hover:text-green-800 mr-2 lg:mr-3">
-                    Edit
-                  </button>
-                  <button className="text-red-600 hover:text-red-800">
-                    Delete
-                  </button>
+            {/* ✅ THAY ĐỔI: Dùng safeData thay vì data */}
+            {safeData.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length + 1}
+                  className="px-4 py-8 text-center text-gray-500"
+                >
+                  No data available
                 </td>
               </tr>
-            ))}
+            ) : (
+              safeData.map((row, idx) => (
+                <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                  {Object.values(row).map((cell, cellIdx) => (
+                    <td
+                      key={cellIdx}
+                      className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700"
+                    >
+                      {cell}
+                    </td>
+                  ))}
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-xs lg:text-sm">
+                    <button
+                      onClick={() => onView(row)}
+                      className="text-blue-600 hover:text-blue-800 mr-2 lg:mr-3 cursor-pointer"
+                    >
+                      View
+                    </button>
+                    <button
+                      onClick={() => onEdit(row)}
+                      className="text-green-600 hover:text-green-800 mr-2 lg:mr-3 cursor-pointer"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(row)}
+                      className="text-red-600 hover:text-red-800 cursor-pointer"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

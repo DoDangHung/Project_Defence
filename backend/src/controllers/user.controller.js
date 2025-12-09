@@ -11,6 +11,22 @@ export const getUsers = async (req, res) => {
   }
 };
 
+export const getUsersById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const users = await UserModel.getUserById(id);
+
+    if (!users) {
+      return res.status(404).json({
+        success: false,
+        message: 'Users not found',
+      });
+    }
+    return res.json({ success: true, data: users });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
 export const createUser = async (req, res) => {
   try {
     const { name, email, password, phone, gender, role, roleId, status } =

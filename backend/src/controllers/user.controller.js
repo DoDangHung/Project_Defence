@@ -13,7 +13,8 @@ export const getUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, phone, gender, role, roleId } = req.body;
+    const { name, email, password, phone, gender, role, roleId, status } =
+      req.body;
 
     let existingRole = null;
 
@@ -55,6 +56,7 @@ export const createUser = async (req, res) => {
         password,
         phone,
         gender,
+        status,
         roleId: existingRole.id,
       },
       include: { role: true },

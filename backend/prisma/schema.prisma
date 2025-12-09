@@ -17,6 +17,13 @@ model Role {
   users User[]
 }
 
+enum UserStatus {
+  active       // đang hoạt động
+  inactive     // không hoạt động
+  terminated   // bác sĩ kết thúc hợp đồng
+  blocked      // tài khoản bị khóa
+}
+
 model User {
   id       Int     @id @default(autoincrement())
   name     String
@@ -26,7 +33,7 @@ model User {
   gender   String?
   roleId   Int
   role     Role    @relation(fields: [roleId], references: [id])
-
+  status   UserStatus @default(active)
   admin            Admin?
   patient          Patient?
   notifications    Notification[]

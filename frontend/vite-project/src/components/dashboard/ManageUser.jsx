@@ -31,6 +31,8 @@ const ManageUser = () => {
           id: user.id,
           name: user.name,
           email: user.email,
+          gender: user.gender,
+          phoneNumber: user.phone,
           role: typeof user.role === 'object' ? user.role.name : user.role,
           status:
             typeof user.status === 'object' ? user.status.name : user.status,
@@ -50,7 +52,16 @@ const ManageUser = () => {
   return (
     <TableContent
       title="Users Management"
-      columns={['ID', 'Name', 'Email', 'Role', 'Status', 'Created At']}
+      columns={[
+        'ID',
+        'Name',
+        'Email',
+        'Gender',
+        'PhoneNumber',
+        'Role',
+        'Status',
+        'Created At',
+      ]}
       data={data}
       onView={handleView}
       onEdit={handleEdit}

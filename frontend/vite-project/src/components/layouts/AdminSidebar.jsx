@@ -39,7 +39,7 @@ export default function AdminSidebar({
     { id: 'reviews', icon: Star, label: 'Reviews' },
     { id: 'notifications', icon: Bell, label: 'Notifications' },
     { id: 'reports', icon: FileText, label: 'Reports' },
-    { id: 'logs', icon: Settings, label: 'System Logs' },
+    { id: 'system', icon: Settings, label: 'System Logs' },
   ];
 
   return (

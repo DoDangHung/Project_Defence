@@ -13,7 +13,7 @@ export default function ViewUsers() {
     axios
       .get(`http://localhost:8080/api/users/${id}`)
       .then((res) => {
-        console.log('data', res.data);
+        console.log('data', res.data.data.city);
         setUser(res.data.data);
         setLoading(false);
       })
@@ -159,8 +159,9 @@ export default function ViewUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="street-address"
-                    name="street-address"
+                    value={user.streetAddress}
+                    readOnly
+                    disabled
                     type="text"
                     autoComplete="street-address"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -177,8 +178,9 @@ export default function ViewUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="city"
-                    name="city"
+                    value={user.city}
+                    readOnly
+                    disabled
                     type="text"
                     autoComplete="address-level2"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -195,8 +197,9 @@ export default function ViewUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="region"
-                    name="region"
+                    value={user.state}
+                    readOnly
+                    disabled
                     type="text"
                     autoComplete="address-level1"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -213,8 +216,9 @@ export default function ViewUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="postal-code"
-                    name="postal-code"
+                    value={user.postalCode}
+                    readOnly
+                    disabled
                     type="text"
                     autoComplete="postal-code"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"

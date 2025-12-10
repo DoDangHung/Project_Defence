@@ -32,11 +32,14 @@ const ManageUser = () => {
           name: user.name,
           email: user.email,
           gender: user.gender,
+          streetAddress: user.streetAddress,
+          city: user.city,
+          state: user.state,
+          postalCode: user.postalCode,
           phoneNumber: user.phone,
           role: typeof user.role === 'object' ? user.role.name : user.role,
           status:
             typeof user.status === 'object' ? user.status.name : user.status,
-          created: user.created || user.createdAt,
         }));
         setData(transformedData);
         setLoading(false);
@@ -57,10 +60,13 @@ const ManageUser = () => {
         'Name',
         'Email',
         'Gender',
+        'Street Address',
+        'City',
+        'State',
+        'Postal-Code',
         'PhoneNumber',
         'Role',
         'Status',
-        'Created At',
       ]}
       data={data}
       onView={handleView}

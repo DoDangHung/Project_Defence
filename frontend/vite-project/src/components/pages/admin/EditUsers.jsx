@@ -2,10 +2,58 @@ import React from 'react';
 import { useParams } from 'react-router-dom';
 import { PhotoIcon, UserCircleIcon } from '@heroicons/react/24/solid';
 import { ChevronDownIcon } from '@heroicons/react/16/solid';
+import { useState } from 'react';
+import { useEffect } from 'react';
+import axios from 'axios';
 
 export default function EditUsers() {
   const { id } = useParams();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    streetAddress: '',
+    city: '',
+    state: '',
+    postalCode: '',
+  });
+  useEffect(() => {
+    axios
+      .get(`http://localhost:8080/api/users/${id}`)
+      .then((res) => {
+        console.log('data from edit User: ', res.data);
+        setUser(res.data.data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error loading user:', err);
+        setLoading(false);
+      });
+  }, [id]);
+  if (loading) return <div>Loading user...</div>;
+  if (!user) return <div>User not found</div>;
 
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setUser((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleClickSave = async (e) => {
+    e.preventDefault();
+    try {
+      const res = await axios.put(
+        `http://localhost:8080/api/users/${id}`,
+        user
+      );
+      console.log('Updated!', res.data);
+      alert('User updated successfully!');
+    } catch (err) {
+      console.error('Update error:', err);
+      alert('Update failed!');
+    }
+  };
   return (
     <div>
       <h1 className="text-xl font-bold">Edit User #{id}</h1>
@@ -27,94 +75,18 @@ export default function EditUsers() {
                   Username
                 </label>
                 <div className="mt-2">
-                  <div className="flex items-center rounded-md bg-white pl-3 outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
-                    <div className="shrink-0 text-base text-gray-500 select-none sm:text-sm/6">
-                      workcation.com/
-                    </div>
+                  <div className="flex items-center rounded-md bg-white outline-1 -outline-offset-1 outline-gray-300 focus-within:outline-2 focus-within:-outline-offset-2 focus-within:outline-indigo-600">
                     <input
-                      id="username"
-                      name="username"
+                      value={user.name}
                       type="text"
-                      placeholder="janesmith"
-                      className="block min-w-0 grow bg-white py-1.5 pr-3 pl-1 text-base text-gray-900 placeholder:text-gray-400 focus:outline-none sm:text-sm/6"
+                      readOnly
+                      disabled
+                      className="  block min-w-0 grow
+                        py-1.5 pr-3 pl-3 text-base text-gray-900
+                        bg-gray-100
+                        cursor-not-allowed
+                        opacity-100"
                     />
-                  </div>
-                </div>
-              </div>
-
-              <div className="col-span-full">
-                <label
-                  htmlFor="about"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  About
-                </label>
-                <div className="mt-2">
-                  <textarea
-                    id="about"
-                    name="about"
-                    rows={3}
-                    className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                    defaultValue={''}
-                  />
-                </div>
-                <p className="mt-3 text-sm/6 text-gray-600">
-                  Write a few sentences about yourself.
-                </p>
-              </div>
-
-              <div className="col-span-full">
-                <label
-                  htmlFor="photo"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  Photo
-                </label>
-                <div className="mt-2 flex items-center gap-x-3">
-                  <UserCircleIcon
-                    aria-hidden="true"
-                    className="size-12 text-gray-300"
-                  />
-                  <button
-                    type="button"
-                    className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50"
-                  >
-                    Change
-                  </button>
-                </div>
-              </div>
-
-              <div className="col-span-full">
-                <label
-                  htmlFor="cover-photo"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  Cover photo
-                </label>
-                <div className="mt-2 flex justify-center rounded-lg border border-dashed border-gray-900/25 px-6 py-10">
-                  <div className="text-center">
-                    <PhotoIcon
-                      aria-hidden="true"
-                      className="mx-auto size-12 text-gray-300"
-                    />
-                    <div className="mt-4 flex text-sm/6 text-gray-600">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer rounded-md bg-transparent font-semibold text-indigo-600 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-indigo-600 hover:text-indigo-500"
-                      >
-                        <span>Upload a file</span>
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          className="sr-only"
-                        />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
-                    </div>
-                    <p className="text-xs/5 text-gray-600">
-                      PNG, JPG, GIF up to 10MB
-                    </p>
                   </div>
                 </div>
               </div>
@@ -139,10 +111,10 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="first-name"
-                    name="first-name"
+                    value={user.name}
+                    readOnly
+                    disabled
                     type="text"
-                    autoComplete="given-name"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
                   />
                 </div>
@@ -157,10 +129,9 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="last-name"
-                    name="last-name"
+                    readOnly
+                    disabled
                     type="text"
-                    autoComplete="family-name"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
                   />
                 </div>
@@ -175,36 +146,11 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="email"
-                    name="email"
+                    value={user.email}
                     type="email"
-                    autoComplete="email"
+                    readOnly
+                    disabled
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                  />
-                </div>
-              </div>
-
-              <div className="sm:col-span-3">
-                <label
-                  htmlFor="country"
-                  className="block text-sm/6 font-medium text-gray-900"
-                >
-                  Country
-                </label>
-                <div className="mt-2 grid grid-cols-1">
-                  <select
-                    id="country"
-                    name="country"
-                    autoComplete="country-name"
-                    className="col-start-1 row-start-1 w-full appearance-none rounded-md bg-white py-1.5 pr-8 pl-3 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
-                  >
-                    <option>United States</option>
-                    <option>Canada</option>
-                    <option>Mexico</option>
-                  </select>
-                  <ChevronDownIcon
-                    aria-hidden="true"
-                    className="pointer-events-none col-start-1 row-start-1 mr-2 size-5 self-center justify-self-end text-gray-500 sm:size-4"
                   />
                 </div>
               </div>
@@ -218,8 +164,9 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="street-address"
-                    name="street-address"
+                    name="streetAddress" // <-- important
+                    value={user.streetAddress}
+                    onChange={handleChange}
                     type="text"
                     autoComplete="street-address"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -236,8 +183,7 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="city"
-                    name="city"
+                    value={user.city}
                     type="text"
                     autoComplete="address-level2"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -254,8 +200,7 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="region"
-                    name="region"
+                    value={user.state}
                     type="text"
                     autoComplete="address-level1"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -272,8 +217,7 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
-                    id="postal-code"
-                    name="postal-code"
+                    value={user.postalCode}
                     type="text"
                     autoComplete="postal-code"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -500,7 +444,8 @@ export default function EditUsers() {
             Cancel
           </button>
           <button
-            type="submit"
+            onClick={handleClickSave}
+            type="button"
             className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >
             Save

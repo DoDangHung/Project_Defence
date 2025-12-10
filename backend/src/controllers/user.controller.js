@@ -29,8 +29,20 @@ export const getUsersById = async (req, res) => {
 };
 export const createUser = async (req, res) => {
   try {
-    const { name, email, password, phone, gender, role, roleId, status } =
-      req.body;
+    const {
+      name,
+      email,
+      password,
+      phone,
+      gender,
+      streetAddress,
+      city,
+      state,
+      postalCode,
+      role,
+      roleId,
+      status,
+    } = req.body;
 
     let existingRole = null;
 
@@ -72,6 +84,10 @@ export const createUser = async (req, res) => {
         password,
         phone,
         gender,
+        streetAddress,
+        city,
+        state,
+        postalCode,
         status,
         roleId: existingRole.id,
       },
@@ -87,15 +103,15 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, password, phone, gender } = req.body;
+    const { streetAddress, city, state, postalCode } = req.body;
 
     console.log('📩 Dữ liệu cần cập nhật:', req.body);
 
     const updatedUser = await UserModel.updateUser(id, {
-      name,
-      password,
-      phone,
-      gender,
+      streetAddress,
+      city,
+      state,
+      postalCode,
     });
 
     if (!updatedUser) {
@@ -132,7 +148,7 @@ export const deleteUser = async (req, res) => {
       data: deletedUser,
     });
   } catch (error) {
-    console.error('❌ Lỗi khi xoa user:', err);
-    res.status(500).json({ success: false, message: err.message });
+    console.error('❌ Lỗi khi xoa user:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

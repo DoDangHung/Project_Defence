@@ -31,6 +31,10 @@ model User {
   password String
   phone    String?
   gender   String?
+  streetAddress String?
+  city          String?
+  state         String?
+  postalCode    String?
   roleId   Int
   role     Role    @relation(fields: [roleId], references: [id])
   status   UserStatus @default(active)

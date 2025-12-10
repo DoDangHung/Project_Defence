@@ -71,4 +71,10 @@ export const patientService = {
       orderBy: { createdAt: 'desc' },
     });
   },
+
+  deletePatient: async (userId) => {
+    return prisma.patient.delete({
+      where: { userId: Number(userId) },
+    });
+  },
 };

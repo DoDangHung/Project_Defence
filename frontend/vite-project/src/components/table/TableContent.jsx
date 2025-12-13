@@ -1,7 +1,15 @@
 import React from 'react';
 import { Search, Filter, Download, Plus } from 'lucide-react';
 
-const TableContent = ({ title, columns, data, onView, onEdit, onDelete }) => {
+const TableContent = ({
+  title,
+  columns,
+  data,
+  onView,
+  onEdit,
+  onDelete,
+  onAddUser,
+}) => {
   // ✅ THÊM: Kiểm tra và đảm bảo data luôn là array
   const safeData = Array.isArray(data) ? data : [];
   console.log('TableContent received:', data);
@@ -14,7 +22,10 @@ const TableContent = ({ title, columns, data, onView, onEdit, onDelete }) => {
           <h3 className="text-base lg:text-lg font-bold text-gray-900">
             {title}
           </h3>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors text-sm cursor-pointer">
+          <button
+            onClick={() => onAddUser()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors text-sm cursor-pointer"
+          >
             <Plus size={18} />
             Add New
           </button>

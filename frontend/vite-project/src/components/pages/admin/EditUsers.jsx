@@ -10,12 +10,7 @@ export default function EditUsers() {
   const { id } = useParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    streetAddress: '',
-    city: '',
-    state: '',
-    postalCode: '',
-  });
+
   useEffect(() => {
     axios
       .get(`http://localhost:8080/api/users/${id}`)
@@ -183,7 +178,9 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
+                    name="city"
                     value={user.city}
+                    onChange={handleChange}
                     type="text"
                     autoComplete="address-level2"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -200,7 +197,9 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
+                    name="state"
                     value={user.state}
+                    onChange={handleChange}
                     type="text"
                     autoComplete="address-level1"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
@@ -217,7 +216,9 @@ export default function EditUsers() {
                 </label>
                 <div className="mt-2">
                   <input
+                    name="postalCode"
                     value={user.postalCode}
+                    onChange={handleChange}
                     type="text"
                     autoComplete="postal-code"
                     className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"

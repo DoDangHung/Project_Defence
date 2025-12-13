@@ -17,6 +17,7 @@ import ManageReviews from '../components/pages/admin/ManageReviews';
 import ManageNotifications from '../components/pages/admin/ManageNotifications';
 import ManageReports from '../components/pages/admin/ManageReports';
 import ManageSystemLogs from '../components/pages/admin/ManageSystemLogs';
+import AddUsers from '../components/pages/admin/AddUsers';
 
 export default function AppRouter() {
   return (
@@ -36,6 +37,7 @@ export default function AppRouter() {
         <Route path="notifications" element={<ManageNotifications />} />
         <Route path="reports" element={<ManageReports />} />
         <Route path="system" element={<ManageSystemLogs />} />
+        <Route path="users/add" element={<AddUsers />} />
         <Route path="users/edit/:id" element={<EditUsers />} />
         <Route path="users/view/:id" element={<ViewUsers />} />
       </Route>

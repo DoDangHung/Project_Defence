@@ -18,6 +18,9 @@ const ManageUser = () => {
     navigate(`/admin/users/edit/${user.id}`);
   };
 
+  const handleAddUser = () => {
+    navigate(`/admin/users/add`);
+  };
   const handleDelete = (user) => {
     console.log('Deleting user:', user);
   };
@@ -70,6 +73,7 @@ const ManageUser = () => {
       ]}
       data={data}
       onView={handleView}
+      onAddUser={handleAddUser}
       onEdit={handleEdit}
       onDelete={handleDelete}
     />

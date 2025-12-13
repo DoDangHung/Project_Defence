@@ -18,28 +18,37 @@ model Role {
 }
 
 enum UserStatus {
-  active       // đang hoạt động
-  inactive     // không hoạt động
-  terminated   // bác sĩ kết thúc hợp đồng
-  blocked      // tài khoản bị khóa
+  active // đang hoạt động
+  inactive // không hoạt động
+  terminated // bác sĩ kết thúc hợp đồng
+  blocked // tài khoản bị khóa
 }
 
 model User {
   id       Int     @id @default(autoincrement())
-  name     String
+  firstName     String
+  lastName  String
   email    String  @unique
   password String
   phone    String?
   gender   String?
+
+  dateOfBirth DateTime?
+
   streetAddress String?
   city          String?
   state         String?
   postalCode    String?
-  roleId   Int
-  role     Role    @relation(fields: [roleId], references: [id])
-  status   UserStatus @default(active)
-  admin            Admin?
-  patient          Patient?
+
+  roleId Int
+  role   Role @relation(fields: [roleId], references: [id])
+
+  status UserStatus @default(active)
+
+  admin   Admin?
+  patient Patient?
+  doctor  Doctor?
+  nurse Nurse[]
   notifications    Notification[]
   sentMessages     Message[]      @relation("SentMessages")
   receivedMessages Message[]      @relation("ReceivedMessages")
@@ -64,21 +73,190 @@ model Admin {
 }
 
 // ====================================
+// ROOM MODEL
+// ====================================
+model Room {
+  id          Int      @id @default(autoincrement())
+  roomNumber  String   @unique
+  type        String   // ICU, General, Private, Emergency
+  status      String   @default("available") // available, full, maintenance
+
+  beds        Bed[]
+  admissions  Admission[]
+  patient Patient[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ====================================
+// BED MODEL
+// ====================================
+
+model Bed {
+  id        Int      @id @default(autoincrement())
+  bedNumber String
+  status    String   @default("available") // available, occupied, cleaning
+
+  roomId    Int
+  room      Room     @relation(fields: [roomId], references: [id])
+
+  admissions Admission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ====================================
+// ADMINSSION MODEL
+// ====================================
+
+model Admission {
+  id           Int      @id @default(autoincrement())
+  patientId    Int
+  doctorId     Int?
+  nurseId      Int?
+  roomId       Int?
+  bedId        Int?
+
+  admissionDate DateTime @default(now())
+  dischargeDate DateTime?
+
+  conditionOnAdmission String?
+  conditionOnDischarge String?
+  status        String @default("admitted") // admitted, discharged, transferred
+
+  patient Patient @relation(fields: [patientId], references: [id])
+  doctor  Doctor? @relation(fields: [doctorId], references: [id])
+  nurse   Nurse?  @relation(fields: [nurseId], references: [id])
+  room    Room?   @relation(fields: [roomId], references: [id])
+  bed     Bed?    @relation(fields: [bedId], references: [id])
+
+  finance Finance[]
+  conditionStatesUpdated ConditionState[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ====================================
+// FINANCE MODEL
+// ====================================
+
+model Finance {
+  id           Int     @id @default(autoincrement())
+  admissionId  Int?
+  patientId    Int
+
+  totalCost    Float
+  paidAmount   Float @default(0)
+  remaining    Float @default(0)
+  status       String @default("unpaid") // unpaid, partial, paid
+
+  items        Json?  // [{ service: "X-ray", cost: 200000 }]
+
+  patient     Patient @relation(fields: [patientId], references: [id])
+  admission   Admission? @relation(fields: [admissionId], references: [id])
+
+ 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ====================================
+// Satisfaction MODEL
+// ====================================
+
+model Satisfaction {
+  id          Int      @id @default(autoincrement())
+  patientId   Int
+  doctorId    Int?
+  appointmentId Int?
+
+  rating      Int      // 1-5
+  feedback    String?
+  category    String?  // nursing, doctor, service, facility
+
+  patient   Patient @relation(fields: [patientId], references: [id])
+  doctor    Doctor? @relation(fields: [doctorId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id])
+
+  createdAt  DateTime @default(now())
+}
+
+// ====================================
+// ConditionState MODEL
+// ====================================
+
+model ConditionState {
+  id          Int      @id @default(autoincrement())
+  patientId   Int
+  admissionId Int?
+
+  condition   String? // Stable, Critical, Severe, Improving, Normal
+  notes       String?
+
+  updatedByDoctorId Int?
+  updatedByDoctor   Doctor? @relation(fields: [updatedByDoctorId], references: [id])
+
+  patient     Patient @relation(fields: [patientId], references: [id])
+  admission   Admission? @relation(fields: [admissionId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+// ====================================
+// NURSE MODEL
+// ====================================
+
+model Nurse {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  shift     String?
+  salary    Float?
+  departmentId Int?
+
+  user       User       @relation(fields: [userId], references: [id])
+  department Department? @relation(fields: [departmentId], references: [id])
+
+  admissions  Admission[]
+  patient Patient[]
+ 
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+
+
+// ====================================
 // PATIENT MODEL
 // ====================================
 
 model Patient {
-  id             Int             @id @default(autoincrement())
-  userId         Int             @unique
-  address        String?
-  appointments   Appointment[]
-  medicalRecords MedicalRecord[]
-  prescriptions  Prescription[]
-  payments       Payment[]
-
-  user      User       @relation(fields: [userId], references: [id])
-  feedbacks Feedback[]
+  id        Int     @id @default(autoincrement())
+  userId    Int @unique
+  user      User    @relation(fields: [userId], references: [id])
+  age       Int?
+  condition String?
+  gender    String?
+  doctor    Doctor? @relation(fields: [doctorId], references: [id])
+  doctorId  Int?
+  nurse     Nurse?  @relation(fields: [nurseId], references: [id])
+  nurseId   Int?
+  admissions     Admission[]
+  department Department? @relation(fields: [departmentId], references: [id])
+  departmentId Int?
+  finances       Finance[]
+  prescription  Prescription[]
+  medicalRecord MedicalRecord[]
+  payment Payment[]
+  feedback Feedback[]
+  appointment Appointment[]
+  satisfaction  Satisfaction[]
+  conditionStatesUpdated ConditionState[]
+  room      Room?   @relation(fields: [roomId], references: [id])
+  roomId    Int?
 }
+
 
 // ====================================
 // DEPARTMENT & DOCTOR MODELS
@@ -89,28 +267,34 @@ model Department {
   name        String
   description String?
   doctors     Doctor[]
+  patient Patient[]
+  nurse Nurse[]
+  
 }
 
 model Doctor {
-  id             Int     @id @default(autoincrement())
-  name           String
-  email          String  @unique
-  password       String
-  phone          String?
+  id     Int  @id @default(autoincrement())
+  userId Int  @unique
+  user   User @relation(fields: [userId], references: [id])
+
   specialization String
   experience     Int?
   bio            String?
   rating         Float?  @default(0.0)
-  departmentId   Int?
 
-  department     Department?     @relation(fields: [departmentId], references: [id])
+  departmentId Int?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
   schedules      Schedule[]
   appointments   Appointment[]
+  patient Patient[]
   feedbacks      Feedback[]
   medicalRecords MedicalRecord[]
   prescriptions  Prescription[]
   availability   Availability[]
-
+  satisfaction  Satisfaction[]
+  admissions     Admission[]
+  conditionStatesUpdated ConditionState[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -162,6 +346,7 @@ model Appointment {
   feedback Feedback? @relation("AppointmentFeedback")
   payment  Payment?
 
+  satisfaction  Satisfaction[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -194,50 +379,50 @@ model Feedback {
 // ====================================
 
 model Payment {
-  id            Int      @id @default(autoincrement())
-  appointmentId Int      @unique
+  id            Int @id @default(autoincrement())
+  appointmentId Int @unique
   patientId     Int
-  
+
   // Phí khám
-  consultationFee  Float   // Phí khám gốc
-  depositAmount    Float   // Tiền đặt cọc (30-50% consultationFee)
-  remainingAmount  Float   // Còn phải trả
-  totalPaid        Float   @default(0) // Tổng đã thanh toán
-  
+  consultationFee Float // Phí khám gốc
+  depositAmount   Float // Tiền đặt cọc (30-50% consultationFee)
+  remainingAmount Float // Còn phải trả
+  totalPaid       Float @default(0) // Tổng đã thanh toán
+
   // Trạng thái thanh toán
-  depositStatus    String  @default("pending") // pending, paid, refunded, failed
-  paymentStatus    String  @default("pending") // pending, partial, completed, refunded
-  
+  depositStatus String @default("pending") // pending, paid, refunded, failed
+  paymentStatus String @default("pending") // pending, partial, completed, refunded
+
   // Transaction IDs
-  depositTransactionId  String? // ID giao dịch đặt cọc
-  finalTransactionId    String? // ID giao dịch thanh toán cuối
-  
+  depositTransactionId String? // ID giao dịch đặt cọc
+  finalTransactionId   String? // ID giao dịch thanh toán cuối
+
   // Phương thức thanh toán
-  paymentMethod    String? // stripe, payos, cash, free_booking
-  paymentProvider  String? // stripe, payos (để phân biệt gateway)
-  
+  paymentMethod   String? // stripe, payos, cash, free_booking
+  paymentProvider String? // stripe, payos (để phân biệt gateway)
+
   // Thông tin gateway
   stripePaymentIntentId String? // Stripe Payment Intent ID
   payosOrderId          String? // PayOS Order ID
-  
+
   // Chi phí phát sinh (thuốc, xét nghiệm...)
-  additionalCharges Json?  @default("[]") // [{service: "Xét nghiệm", amount: 150000, status: "paid"}]
-  
+  additionalCharges Json? @default("[]") // [{service: "Xét nghiệm", amount: 150000, status: "paid"}]
+
   // Refund policy
-  refundAmount     Float?  @default(0) // Số tiền đã hoàn
-  refundReason     String? // Lý do hoàn tiền
-  refundedAt       DateTime?
-  
+  refundAmount Float?    @default(0) // Số tiền đã hoàn
+  refundReason String? // Lý do hoàn tiền
+  refundedAt   DateTime?
+
   // Timestamps
-  depositPaidAt    DateTime?
-  finalPaidAt      DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  
+  depositPaidAt DateTime?
+  finalPaidAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
   // Relations
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   patient     Patient     @relation(fields: [patientId], references: [id])
-  
+
   @@index([patientId])
   @@index([paymentStatus])
   @@index([depositStatus])
@@ -250,14 +435,14 @@ model Payment {
 model PaymentTransaction {
   id              Int      @id @default(autoincrement())
   paymentId       Int
-  transactionType String   // deposit, final_payment, refund, additional_charge
+  transactionType String // deposit, final_payment, refund, additional_charge
   amount          Float
-  status          String   // success, failed, pending
-  provider        String   // stripe, payos, cash
-  transactionId   String?  // External transaction ID
-  metadata        Json?    // Extra info from gateway
+  status          String // success, failed, pending
+  provider        String // stripe, payos, cash
+  transactionId   String? // External transaction ID
+  metadata        Json? // Extra info from gateway
   createdAt       DateTime @default(now())
-  
+
   @@index([paymentId])
   @@index([transactionId])
 }

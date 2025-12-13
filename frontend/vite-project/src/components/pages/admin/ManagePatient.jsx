@@ -1,6 +1,8 @@
 import React from 'react';
+import ManagePatients from '../../dashboard/ManagePatients';
+
 function ManagePatient() {
-  return <h1>ManagePatient</h1>;
+  return <ManagePatients />;
 }
 
 export default ManagePatient;

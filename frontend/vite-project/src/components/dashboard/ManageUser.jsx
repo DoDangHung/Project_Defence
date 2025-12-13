@@ -32,7 +32,8 @@ const ManageUser = () => {
 
         const transformedData = res.data.data.map((user) => ({
           id: user.id,
-          name: user.name,
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
           gender: user.gender,
           streetAddress: user.streetAddress,
@@ -60,7 +61,8 @@ const ManageUser = () => {
       title="Users Management"
       columns={[
         'ID',
-        'Name',
+        'First Name',
+        'Last Name',
         'Email',
         'Gender',
         'Street Address',

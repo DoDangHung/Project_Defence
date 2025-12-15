@@ -1,6 +1,7 @@
 import React from 'react';
+import PrescriptionForm from '../../dashboard/PrescriptionForm';
 function ManagePrecriptions() {
-  return <h1>ManagePrecriptions</h1>;
+  return <PrescriptionForm />;
 }
 
 export default ManagePrecriptions;

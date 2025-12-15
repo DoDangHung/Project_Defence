@@ -1,6 +1,7 @@
 import React from 'react';
+import DepartmentManagement from '../../dashboard/Departments';
 function ManageDeparments() {
-  return <h1>ManageDeparments</h1>;
+  return <DepartmentManagement />;
 }
 
 export default ManageDeparments;

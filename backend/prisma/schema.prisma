@@ -34,7 +34,7 @@ model User {
   gender   String?
 
   dateOfBirth DateTime?
-
+  avatar   String?
   streetAddress String?
   city          String?
   state         String?

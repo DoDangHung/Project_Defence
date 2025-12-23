@@ -1,12 +1,26 @@
 import prisma from '../../config/db.js';
 
-export const getAllDoctor = async (departmentId) => {
-  const where = departmentId ? { departmentId: Number(departmentId) } : {};
-  return prisma.doctor.findMany({
-    where,
-    include: { department: true },
-  });
-};
+// export const getAllDoctor = async (departmentId) => {
+//   const where = departmentId ? { departmentId: Number(departmentId) } : {};
+
+//   const doctors = await prisma.doctor.findMany({
+//     where,
+//     include: {
+//       department: true,
+//       user: {
+//         include: {
+//           role: true,
+//         },
+//       },
+//     },
+//   });
+
+//   // 🔴 LOG để debug
+//   console.log('Service - First doctor:', JSON.stringify(doctors[0], null, 2));
+//   console.log('Service - First doctor user:', doctors[0]?.user);
+
+//   return doctors;
+// };
 
 export const getDoctorById = async (id) => {
   return prisma.doctor.findUnique({
@@ -15,6 +29,12 @@ export const getDoctorById = async (id) => {
       department: true,
       schedules: true,
       appointments: true,
+      user: {
+        // ✅ THÊM phần này
+        include: {
+          role: true,
+        },
+      },
     },
   });
 };
@@ -135,7 +155,15 @@ export const getFilteredDoctors = async (params) => {
   const [items, total] = await Promise.all([
     prisma.doctor.findMany({
       where,
-      include: { department: true },
+      include: {
+        department: true,
+        user: {
+          // ✅ THÊM DÒNG NÀY
+          include: {
+            role: true,
+          },
+        },
+      },
       orderBy: sort,
       skip: pagination.skip,
       take: pagination.take,

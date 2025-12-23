@@ -1,23 +1,20 @@
 import * as DoctorModel from '../doctors/doctor.service.js';
 import prisma from '../../config/db.js';
 
-export const getAllDoctor = async (req, res) => {
-  try {
-    const doctors = await DoctorModel.getAllDoctor(req.query.departmentId);
-    res.json({ success: true, data: doctors });
-    console.log(doctors);
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// export const getDoctor = async (req, res) => {
+// export const getAllDoctor = async (req, res) => {
 //   try {
-//     const { departmentId } = req.query;
-//     const doctors = await DoctorModel.getAllDoctor(departmentId);
-//     res.json({ success: true, data: doctors });
-//   } catch (err) {
-//     res.status(500).json({ success: false, message: err.message });
+//     const doctors = await DoctorModel.getAllDoctor(req.query.departmentId);
+
+//     console.log('BACKEND doctors[0]:', JSON.stringify(doctors[0], null, 2));
+
+//     res.json({
+//       success: true,
+//       data: {
+//         items: doctors,
+//       },
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
 //   }
 // };
 

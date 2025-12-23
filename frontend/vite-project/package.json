@@ -21,6 +21,7 @@
     "react-router-dom": "^7.10.1",
     "react-select": "^5.10.2",
     "recharts": "^3.3.0",
+    "sass": "^1.97.1",
     "shadcn": "^3.6.1",
     "shadcn-ui": "^0.9.5",
     "tailwindcss": "^4.1.18"

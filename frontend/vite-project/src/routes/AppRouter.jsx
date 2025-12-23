@@ -18,10 +18,19 @@ import ManageNotifications from '../components/pages/admin/ManageNotifications';
 import ManageReports from '../components/pages/admin/ManageReports';
 import ManageSystemLogs from '../components/pages/admin/ManageSystemLogs';
 import AddUsers from '../components/pages/admin/AddUsers';
+import AddDoctors from '../components/pages/admin/AddDoctors';
+import EditDoctors from '../components/pages/admin/EditDoctors';
+import ViewDoctors from '../components/pages/admin/ViewDoctors';
+import MainLayout from '../components/layouts/MainLayout';
+import HomePage from '../pages/homepage/HomePage';
 
 export default function AppRouter() {
   return (
     <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<HomePage />} />
+      </Route>
+
       <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />
       {/* Admin Layout Wrapper */}
       <Route path="/admin" element={<AdminLayout />}>
@@ -40,6 +49,10 @@ export default function AppRouter() {
         <Route path="users/add" element={<AddUsers />} />
         <Route path="users/edit/:id" element={<EditUsers />} />
         <Route path="users/view/:id" element={<ViewUsers />} />
+
+        <Route path="doctors/add" element={<AddDoctors />} />
+        <Route path="doctors/edit/:id" element={<EditDoctors />} />
+        <Route path="doctors/view/:id" element={<ViewDoctors />} />
       </Route>
     </Routes>
   );

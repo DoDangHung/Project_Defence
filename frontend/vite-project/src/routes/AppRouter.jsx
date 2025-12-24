@@ -23,12 +23,14 @@ import EditDoctors from '../components/pages/admin/EditDoctors';
 import ViewDoctors from '../components/pages/admin/ViewDoctors';
 import MainLayout from '../components/layouts/MainLayout';
 import HomePage from '../pages/homepage/HomePage';
+import Booking from '../pages/homepage/sections/BookingSchedules/Booking';
 
 export default function AppRouter() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/booking" element={<Booking />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/admin/dashboard" replace />} />

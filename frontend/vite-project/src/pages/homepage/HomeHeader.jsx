@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Menu, X } from 'lucide-react';
+import { useNavigate } from 'react-router';
 function HomeHeader() {
+  const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -8,10 +10,13 @@ function HomeHeader() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
+            <div className=" w-10 h-10 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center text-white font-bold text-xl">
               HC
             </div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+            <span
+              onClick={() => navigate('/')}
+              className="cursor-pointer text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent"
+            >
               HealthCare
             </span>
           </div>
@@ -28,7 +33,7 @@ function HomeHeader() {
               href="#services"
               className="text-gray-700 hover:text-blue-600 font-medium transition"
             >
-              Dịch Vụ
+              Dịch Vụ Y Te
             </a>
             <a
               href="#doctors"

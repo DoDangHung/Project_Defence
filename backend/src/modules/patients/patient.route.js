@@ -2,7 +2,7 @@ import express from 'express';
 import { patientController } from './patient.controller.js';
 
 const router = express.Router();
-
+router.get('/', patientController.getAllPatients);
 router.get('/:id', patientController.getProfile);
 
 router.put('/:id', patientController.updateProfile);

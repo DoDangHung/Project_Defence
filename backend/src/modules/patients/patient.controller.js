@@ -1,6 +1,24 @@
 import { patientService } from './patient.service.js';
 
 export const patientController = {
+  getAllPatients: async (req, res) => {
+    try {
+      const filters = req.query;
+      const result = await patientService.getAllPatients(filters);
+
+      res.status(200).json({
+        success: true,
+        message: 'Patients retrieved successfully',
+        ...result,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error retrieving patients',
+        error: error.message,
+      });
+    }
+  },
   getProfile: async (req, res) => {
     try {
       const patient = await patientService.getProfile(req.params.id);

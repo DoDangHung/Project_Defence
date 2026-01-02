@@ -25,16 +25,16 @@ enum UserStatus {
 }
 
 model User {
-  id       Int     @id @default(autoincrement())
-  firstName     String
+  id        Int     @id @default(autoincrement())
+  firstName String
   lastName  String
-  email    String  @unique
-  password String
-  phone    String?
-  gender   String?
+  email     String  @unique
+  password  String
+  phone     String?
+  gender    String?
 
-  dateOfBirth DateTime?
-  avatar   String?
+  dateOfBirth   DateTime?
+  avatar        String?
   streetAddress String?
   city          String?
   state         String?
@@ -45,10 +45,10 @@ model User {
 
   status UserStatus @default(active)
 
-  admin   Admin?
-  patient Patient?
-  doctor  Doctor?
-  nurse Nurse[]
+  admin            Admin?
+  patient          Patient?
+  doctor           Doctor?
+  nurse            Nurse[]
   notifications    Notification[]
   sentMessages     Message[]      @relation("SentMessages")
   receivedMessages Message[]      @relation("ReceivedMessages")
@@ -72,20 +72,81 @@ model Admin {
   updatedAt DateTime @updatedAt
 }
 
+model Specialty {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  icon        String? // icon frontend
+  image       String? // banner hình
+  isActive    Boolean @default(true)
+  priority    Int     @default(0) // sắp xếp hiển thị
+
+  // Relations
+  doctors Doctor[]
+  clinics ClinicSpecialty[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Clinic {
+  id          Int     @id @default(autoincrement())
+  name        String
+  slug        String  @unique
+  description String?
+  logo        String?
+  images      Json? // gallery hình ảnh
+
+  phone String?
+  email String?
+
+  address   String
+  ward      String?
+  district  String?
+  city      String
+  latitude  Float?
+  longitude Float?
+
+  openingTime String? // "08:00"
+  closingTime String? // "17:00"
+  isActive    Boolean @default(true)
+
+  // Relations
+  specialties  ClinicSpecialty[]
+  doctors      Doctor[]          @relation("DoctorClinics")
+  appointments Appointment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ClinicSpecialty {
+  id          Int @id @default(autoincrement())
+  clinicId    Int
+  specialtyId Int
+
+  clinic    Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Cascade)
+
+  @@unique([clinicId, specialtyId])
+  @@index([clinicId])
+  @@index([specialtyId])
+}
+
 // ====================================
 // ROOM MODEL
 // ====================================
 model Room {
-  id          Int      @id @default(autoincrement())
-  roomNumber  String   @unique
-  type        String   // ICU, General, Private, Emergency
-  status      String   @default("available") // available, full, maintenance
+  id         Int    @id @default(autoincrement())
+  roomNumber String @unique
+  type       String // ICU, General, Private, Emergency
+  status     String @default("available") // available, full, maintenance
 
-  beds        Bed[]
-  admissions  Admission[]
-  patient Patient[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  beds       Bed[]
+  admissions Admission[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 }
 
 // ====================================
@@ -93,12 +154,12 @@ model Room {
 // ====================================
 
 model Bed {
-  id        Int      @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   bedNumber String
-  status    String   @default("available") // available, occupied, cleaning
+  status    String @default("available") // available, occupied, cleaning
 
-  roomId    Int
-  room      Room     @relation(fields: [roomId], references: [id])
+  roomId Int
+  room   Room @relation(fields: [roomId], references: [id])
 
   admissions Admission[]
 
@@ -111,19 +172,19 @@ model Bed {
 // ====================================
 
 model Admission {
-  id           Int      @id @default(autoincrement())
-  patientId    Int
-  doctorId     Int?
-  nurseId      Int?
-  roomId       Int?
-  bedId        Int?
+  id        Int  @id @default(autoincrement())
+  patientId Int
+  doctorId  Int?
+  nurseId   Int?
+  roomId    Int?
+  bedId     Int?
 
-  admissionDate DateTime @default(now())
+  admissionDate DateTime  @default(now())
   dischargeDate DateTime?
 
   conditionOnAdmission String?
   conditionOnDischarge String?
-  status        String @default("admitted") // admitted, discharged, transferred
+  status               String  @default("admitted") // admitted, discharged, transferred
 
   patient Patient @relation(fields: [patientId], references: [id])
   doctor  Doctor? @relation(fields: [doctorId], references: [id])
@@ -131,10 +192,10 @@ model Admission {
   room    Room?   @relation(fields: [roomId], references: [id])
   bed     Bed?    @relation(fields: [bedId], references: [id])
 
-  finance Finance[]
+  finance                Finance[]
   conditionStatesUpdated ConditionState[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 }
 
 // ====================================
@@ -142,23 +203,22 @@ model Admission {
 // ====================================
 
 model Finance {
-  id           Int     @id @default(autoincrement())
-  admissionId  Int?
-  patientId    Int
+  id          Int  @id @default(autoincrement())
+  admissionId Int?
+  patientId   Int
 
-  totalCost    Float
-  paidAmount   Float @default(0)
-  remaining    Float @default(0)
-  status       String @default("unpaid") // unpaid, partial, paid
+  totalCost  Float
+  paidAmount Float  @default(0)
+  remaining  Float  @default(0)
+  status     String @default("unpaid") // unpaid, partial, paid
 
-  items        Json?  // [{ service: "X-ray", cost: 200000 }]
+  items Json? // [{ service: "X-ray", cost: 200000 }]
 
-  patient     Patient @relation(fields: [patientId], references: [id])
-  admission   Admission? @relation(fields: [admissionId], references: [id])
+  patient   Patient    @relation(fields: [patientId], references: [id])
+  admission Admission? @relation(fields: [admissionId], references: [id])
 
- 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ====================================
@@ -166,20 +226,20 @@ model Finance {
 // ====================================
 
 model Satisfaction {
-  id          Int      @id @default(autoincrement())
-  patientId   Int
-  doctorId    Int?
+  id            Int  @id @default(autoincrement())
+  patientId     Int
+  doctorId      Int?
   appointmentId Int?
 
-  rating      Int      // 1-5
-  feedback    String?
-  category    String?  // nursing, doctor, service, facility
+  rating   Int // 1-5
+  feedback String?
+  category String? // nursing, doctor, service, facility
 
-  patient   Patient @relation(fields: [patientId], references: [id])
-  doctor    Doctor? @relation(fields: [doctorId], references: [id])
+  patient     Patient      @relation(fields: [patientId], references: [id])
+  doctor      Doctor?      @relation(fields: [doctorId], references: [id])
   appointment Appointment? @relation(fields: [appointmentId], references: [id])
 
-  createdAt  DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 // ====================================
@@ -187,20 +247,20 @@ model Satisfaction {
 // ====================================
 
 model ConditionState {
-  id          Int      @id @default(autoincrement())
+  id          Int  @id @default(autoincrement())
   patientId   Int
   admissionId Int?
 
-  condition   String? // Stable, Critical, Severe, Improving, Normal
-  notes       String?
+  condition String? // Stable, Critical, Severe, Improving, Normal
+  notes     String?
 
   updatedByDoctorId Int?
   updatedByDoctor   Doctor? @relation(fields: [updatedByDoctorId], references: [id])
 
-  patient     Patient @relation(fields: [patientId], references: [id])
-  admission   Admission? @relation(fields: [admissionId], references: [id])
+  patient   Patient    @relation(fields: [patientId], references: [id])
+  admission Admission? @relation(fields: [admissionId], references: [id])
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 }
 
 // ====================================
@@ -208,55 +268,42 @@ model ConditionState {
 // ====================================
 
 model Nurse {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
-  shift     String?
-  salary    Float?
+  id           Int     @id @default(autoincrement())
+  userId       Int     @unique
+  shift        String?
+  salary       Float?
   departmentId Int?
 
-  user       User       @relation(fields: [userId], references: [id])
+  user       User        @relation(fields: [userId], references: [id])
   department Department? @relation(fields: [departmentId], references: [id])
 
-  admissions  Admission[]
-  patient Patient[]
- 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  admissions Admission[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
-
-
-
 
 // ====================================
 // PATIENT MODEL
 // ====================================
 
 model Patient {
-  id        Int     @id @default(autoincrement())
-  userId    Int @unique
-  user      User    @relation(fields: [userId], references: [id])
-  age       Int?
-  condition String?
-  gender    String?
-  doctor    Doctor? @relation(fields: [doctorId], references: [id])
-  doctorId  Int?
-  nurse     Nurse?  @relation(fields: [nurseId], references: [id])
-  nurseId   Int?
-  admissions     Admission[]
-  department Department? @relation(fields: [departmentId], references: [id])
-  departmentId Int?
-  finances       Finance[]
-  prescription  Prescription[]
-  medicalRecord MedicalRecord[]
-  payment Payment[]
-  feedback Feedback[]
-  appointment Appointment[]
-  satisfaction  Satisfaction[]
+  id                     Int              @id @default(autoincrement())
+  userId                 Int              @unique
+  user                   User             @relation(fields: [userId], references: [id])
+  age                    Int?
+  condition              String?
+  gender                 String?
+  admissions             Admission[]
+  finances               Finance[]
+  prescription           Prescription[]
+  medicalRecord          MedicalRecord[]
+  payment                Payment[]
+  feedback               Feedback[]
+  appointment            Appointment[]
+  satisfaction           Satisfaction[]
   conditionStatesUpdated ConditionState[]
-  room      Room?   @relation(fields: [roomId], references: [id])
-  roomId    Int?
 }
-
 
 // ====================================
 // DEPARTMENT & DOCTOR MODELS
@@ -266,11 +313,11 @@ model Department {
   id          Int      @id @default(autoincrement())
   name        String
   description String?
-  doctors     Doctor[]
-  patient Patient[]
-  nurse Nurse[]
-  
+
+  doctors Doctor[]
+  nurses  Nurse[]
 }
+
 
 model Doctor {
   id     Int  @id @default(autoincrement())
@@ -285,18 +332,20 @@ model Doctor {
   departmentId Int?
   department   Department? @relation(fields: [departmentId], references: [id])
 
-  schedules      Schedule[]
-  appointments   Appointment[]
-  patient Patient[]
-  feedbacks      Feedback[]
-  medicalRecords MedicalRecord[]
-  prescriptions  Prescription[]
-  availability   Availability[]
-  satisfaction  Satisfaction[]
-  admissions     Admission[]
+  schedules              Schedule[]
+  appointments           Appointment[]
+  feedbacks              Feedback[]
+  medicalRecords         MedicalRecord[]
+  prescriptions          Prescription[]
+  availability           Availability[]
+  satisfaction           Satisfaction[]
+  admissions             Admission[]
+  // Relations
+  specialties            Specialty[]
+  clinics                Clinic[]         @relation("DoctorClinics") // Thêm tên relation
   conditionStatesUpdated ConditionState[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 }
 
 // ====================================
@@ -332,6 +381,7 @@ model Appointment {
   id         Int      @id @default(autoincrement())
   patientId  Int
   doctorId   Int
+  clinicId   Int
   scheduleId Int?
   date       DateTime
   startTime  DateTime
@@ -340,15 +390,15 @@ model Appointment {
   status     String   @default("pending")
 
   patient  Patient   @relation(fields: [patientId], references: [id])
-  doctor   Doctor    @relation(fields: [doctorId], references: [id])
   schedule Schedule? @relation(fields: [scheduleId], references: [id])
-
+  clinic   Clinic    @relation(fields: [clinicId], references: [id])
+  doctor   Doctor    @relation(fields: [doctorId], references: [id])
   feedback Feedback? @relation("AppointmentFeedback")
   payment  Payment?
 
-  satisfaction  Satisfaction[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  satisfaction Satisfaction[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
 // ====================================

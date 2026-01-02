@@ -1,76 +1,22 @@
 import express from 'express';
-import { AppointmentController } from './appointment.controller.js';
-import { appointmentService } from './appointment.service.js';
-
+import { AppointmentController } from '../appointments/appointment.controller.js';
 const router = express.Router();
+// Middleware để xác thực (bạn cần tự implement)
+// const { authenticate, authorize } = require('../middleware/auth');
 
-// POST: Book appointment
-router.post('/book', async (req, res) => {
-  try {
-    console.log('=== REQUEST BODY ===');
-    console.log(req.body);
+// Public routes hoặc routes cần authentication
+router.get('/statistics', AppointmentController.getStatistics);
+router.get('/patient/:patientId', AppointmentController.getPatientAppointments);
+router.get('/doctor/:doctorId', AppointmentController.getDoctorAppointments);
+router.get('/clinic/:clinicId', AppointmentController.getClinicAppointments);
+router.get('/:id', AppointmentController.getAppointmentById);
+router.get('/', AppointmentController.getAllAppointments);
 
-    const result = await AppointmentController.bookSlot(req.body);
+router.post('/', AppointmentController.createAppointment);
 
-    res.status(201).json({
-      success: true,
-      message: 'Appointment booked successfully',
-      data: result,
-    });
-  } catch (error) {
-    console.error('Booking error:', error);
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
+router.put('/:id', AppointmentController.updateAppointment);
+router.patch('/:id/status', AppointmentController.updateStatus);
 
-// GET: Available slots
-router.get('/available-slots/:doctorId/:date', async (req, res) => {
-  try {
-    const { doctorId, date } = req.params;
-    const { duration } = req.query; // ?duration=30
+router.delete('/:id', AppointmentController.deleteAppointment);
 
-    const slots = await appointmentService.getAvailableSlots(
-      doctorId,
-      date,
-      duration ? Number(duration) : 30
-    );
-
-    res.json({
-      success: true,
-      data: slots,
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
-
-// GET: Doctor slots with booking info
-router.get('/doctor-slots/:doctorId/:date', async (req, res) => {
-  try {
-    const { doctorId, date } = req.params;
-    const { duration } = req.query;
-
-    const slots = await appointmentService.getDoctorBySlots(
-      doctorId,
-      date,
-      duration ? Number(duration) : 30
-    );
-
-    res.json({
-      success: true,
-      data: slots,
-    });
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
-  }
-});
 export default router;

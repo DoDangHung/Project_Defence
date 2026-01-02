@@ -1,13 +1,15 @@
 import express from 'express';
 import cors from 'cors';
 import dotnev from 'dotenv';
-import userRoutes from './routes/user.routes.js';
+import userRoutes from './modules/users/user.route.js';
 import doctorRoutes from './modules/doctors/doctor.routes.js';
 import departmentRoutes from './modules/departments/department.routes.js';
 import schedulesRoutes from './modules/schedules/schedules.routes.js';
 import availabilityRoutes from './modules/availability/availability.routes.js';
 import appointmentRoutes from './modules/appointments/appointment.route.js';
 import patientRoutes from './modules/patients/patient.route.js';
+import specialtyRoutes from './modules/specialty/specialty.routes.js';
+import clinicRoutes from './modules/clinics/clinics.routes.js';
 
 dotnev.config();
 const app = express();
@@ -22,6 +24,8 @@ app.use('/api/schedules', schedulesRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/patients', patientRoutes);
+app.use('/api/specialty', specialtyRoutes);
+app.use('/api/clinics', clinicRoutes);
 
 app.get('/', (req, res) => {
   res.send('HealthCare API is running');

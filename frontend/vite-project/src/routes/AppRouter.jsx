@@ -24,6 +24,8 @@ import ViewDoctors from '../components/pages/admin/ViewDoctors';
 import MainLayout from '../components/layouts/MainLayout';
 import HomePage from '../pages/homepage/HomePage';
 import Booking from '../pages/homepage/sections/BookingSchedules/Booking';
+import ManageSpecialty from '../components/pages/admin/ManageSpecialty';
+import ManageClinic from '../components/pages/admin/ManageClinic';
 
 export default function AppRouter() {
   return (
@@ -40,6 +42,8 @@ export default function AppRouter() {
         <Route path="users" element={<ManageUsers />} />
         <Route path="doctors" element={<ManageDoctors />} />
         <Route path="patients" element={<ManagePatient />} />
+        <Route path="specialty" element={<ManageSpecialty />} />
+        <Route path="clinic" element={<ManageClinic />} />
         <Route path="appointments" element={<ManageAppointments />} />
         <Route path="departments" element={<ManageDeparments />} />
         <Route path="prescriptions" element={<ManagePrecriptions />} />

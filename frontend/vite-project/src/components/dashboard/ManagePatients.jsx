@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import {
   Search,
   Filter,
@@ -13,119 +14,61 @@ import {
   X,
   ChevronRight,
 } from 'lucide-react';
+import { useParams } from 'react-router';
 
 const ManagePatients = () => {
+  const { id } = useParams();
+  const [data, setData] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [patients, setPatients] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedTab, setSelectedTab] = useState('patients');
   const searchRef = useRef(null);
 
+  console.log('data patients');
+  useEffect(() => {
+    axios
+      .get('http://localhost:8080/api/patients')
+      .then((res) => {
+        const mappedPatients = res.data.data.map((p) => ({
+          id: p.id,
+
+          // 👤 Basic info
+          name: `${p.user.firstName} ${p.user.lastName}`,
+          age: p.age ?? '--',
+          gender: p.gender ?? '--',
+          avatar: p.user.avatar,
+
+          // 📞 Contact
+          email: p.user.email,
+          phone: p.user.phone,
+
+          // 🩺 Medical (tạm thời)
+          recentProcedure: p.condition ?? '—',
+
+          // 👨‍⚕️ Doctor & Specialty (chưa có thì để placeholder)
+          doctor: 'Chưa chỉ định',
+          specialty: 'Chưa xác định',
+        }));
+
+        setPatients(mappedPatients);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
+
   // Mock patient data
-  const patients = [
-    {
-      id: 'P001',
-      mrn: '8756321',
-      ssn: '357-247-8745',
-      name: 'Dia Hemphery',
-      age: 28,
-      gender: 'Female',
-      email: 'dia.hemphery@email.com',
-      phone: '+1 (987) 3398 387',
-      avatar: null,
-      recentProcedure: 'Fracture',
-      doctor: 'Dr. Sarah Wilson',
-      specialty: 'Orthopedics',
-      bloodType: 'O+',
-      lastVisit: '2024-12-10',
-    },
-    {
-      id: 'P002',
-      mrn: '3498712',
-      ssn: '648-778-9145',
-      name: 'Diana Robinson',
-      age: 35,
-      gender: 'Female',
-      email: 'diana.rob@email.com',
-      phone: '+1 (987) 3398 387',
-      avatar: null,
-      recentProcedure: 'Premium',
-      doctor: 'Dr. James Brown',
-      specialty: 'Cardiology',
-      bloodType: 'A+',
-      lastVisit: '2024-12-08',
-    },
-    {
-      id: 'P003',
-      mrn: '7877457',
-      ssn: '784-574-587',
-      name: 'Diane Kemp',
-      age: 42,
-      gender: 'Female',
-      email: 'diane.k@email.com',
-      phone: '+1 (478) 5587 338',
-      avatar: null,
-      recentProcedure: 'Premium',
-      doctor: 'Dr. Emily Davis',
-      specialty: 'Neurology',
-      bloodType: 'B-',
-      lastVisit: '2024-11-25',
-    },
-    {
-      id: 'P004',
-      mrn: '5455856',
-      ssn: '878-745-124',
-      name: 'Diandra Keith',
-      age: 31,
-      gender: 'Female',
-      email: 'diandra.k@email.com',
-      phone: '+1 (776) 3398 888',
-      avatar: null,
-      recentProcedure: 'CBT',
-      doctor: 'Dr. Michael Lee',
-      specialty: 'Psychology',
-      bloodType: 'AB+',
-      lastVisit: '2024-12-12',
-    },
-    {
-      id: 'P005',
-      mrn: '4578567',
-      ssn: '954-786-138',
-      name: 'Dianora Bean',
-      age: 29,
-      gender: 'Female',
-      email: 'dianora.b@email.com',
-      phone: '+1 (887) 8697 778',
-      avatar: null,
-      recentProcedure: 'Psychology',
-      doctor: 'Dr. Lisa Chen',
-      specialty: 'Psychology',
-      bloodType: 'O-',
-      lastVisit: '2024-12-05',
-    },
-    {
-      id: 'P006',
-      mrn: '1234567',
-      ssn: '123-456-789',
-      name: 'John Doe',
-      age: 45,
-      gender: 'Male',
-      email: 'john.doe@email.com',
-      phone: '+1 (234) 567 8900',
-      avatar: null,
-      recentProcedure: 'Cardiology',
-      doctor: 'Dr. Sarah Wilson',
-      specialty: 'Cardiology',
-      bloodType: 'A+',
-      lastVisit: '2024-12-01',
-    },
-  ];
 
   // Filter patients based on search
-  const filteredPatients = patients.filter(
-    (patient) =>
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      patient.mrn.includes(searchTerm) ||
-      patient.ssn.includes(searchTerm)
+  const filteredPatients = patients.filter((patient) =>
+    [patient.name, patient.email, patient.phone]
+      .filter(Boolean)
+      .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   // Close dropdown when clicking outside

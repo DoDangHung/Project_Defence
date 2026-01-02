@@ -32,6 +32,8 @@ export default function AdminSidebar({
     { id: 'users', icon: Users, label: 'Users' },
     { id: 'doctors', icon: Stethoscope, label: 'Doctors' },
     { id: 'patients', icon: UserCircle, label: 'Patients' },
+    { id: 'Specialty', icon: UserCircle, label: 'Specialty' },
+    { id: 'Clinic', icon: UserCircle, label: 'Clinic' },
     { id: 'appointments', icon: Calendar, label: 'Appointments' },
     { id: 'departments', icon: Building2, label: 'Departments' },
     { id: 'prescriptions', icon: Pill, label: 'Prescriptions' },

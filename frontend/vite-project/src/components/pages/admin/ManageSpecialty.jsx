@@ -20,7 +20,9 @@ const ManageSpecialty = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingSpecialty, setEditingSpecialty] = useState(null);
   const [viewDetail, setViewDetail] = useState();
+  const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
+
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
@@ -30,6 +32,14 @@ const ManageSpecialty = () => {
     isActive: true,
     priority: 0,
   });
+  const tabs = [
+    { key: 'overview', label: 'Overview' },
+    { key: 'schedule', label: 'Schedule' },
+    { key: 'appointments', label: 'Appointments' },
+    { key: 'patients', label: 'Patients' },
+    { key: 'activity', label: 'Medical Activity' },
+    { key: 'feedback', label: 'Feedback' },
+  ];
   const [iconPreview, setIconPreview] = useState('');
   const [imagePreview, setImagePreview] = useState('');
 
@@ -161,14 +171,36 @@ const ManageSpecialty = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto mb-8">
+        <nav className="flex gap-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`py-3 text-sm font-medium border-b-2 transition-colors
+                    ${
+                      activeTab === tab.key
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-500 hover:text-gray-700'
+                    }
+                    `}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              Quản Lý Chuyên Khoa
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Quản lý danh sách các chuyên khoa y tế
-            </p>
+            {activeTab === 'overview' && (
+              <>
+                <h1 className="text-3xl font-bold text-gray-900">
+                  Quản Lý Chuyên Khoa
+                </h1>
+                <p className="text-gray-600 mt-1">
+                  Quản lý danh sách các chuyên khoa y tế
+                </p>
+              </>
+            )}
           </div>
           <button
             onClick={() => handleOpenModal()}

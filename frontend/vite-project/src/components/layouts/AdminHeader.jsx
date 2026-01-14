@@ -8,6 +8,12 @@ const AdminHeader = ({
   setMobileMenuOpen,
   activeTab,
 }) => {
+  const user = JSON.parse(sessionStorage.getItem('user'));
+
+  const fullName = `${user?.firstName} ${user?.lastName}`;
+  const email = user?.email;
+  const avatarLetter = user?.firstName?.charAt(0).toUpperCase();
+
   return (
     <header className="bg-white border-b border-gray-200 px-4 lg:px-8 py-4 shadow-sm">
       <div className="flex items-center justify-between">
@@ -38,8 +44,8 @@ const AdminHeader = ({
           </button>
           <div className="hidden md:flex items-center gap-3">
             <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">Admin User</p>
-              <p className="text-xs text-gray-500">admin@hospital.com</p>
+              <p className="text-sm font-semibold text-gray-900">{fullName}</p>
+              <p className="text-xs text-gray-500">{email}</p>
             </div>
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
               A

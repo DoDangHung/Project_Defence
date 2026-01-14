@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
-import FormData from './Steps/FormData';
-import BookingSuccess from './Steps/BookingSuccess';
-import StepSpecialty from './Steps/StepSpecialty';
-import StepClinic from './Steps/StepClinic';
-import StepSelectDoctor from './Steps/StepSelectDoctor';
+import { Outlet, useLocation } from 'react-router-dom';
 import BookingHomePage from './Steps/BookingHomePage';
-import StepPayments from './Steps/StepPayments';
-import StepConfirmPayment from './Steps/StepConfirmPayment';
 
 export default function Booking() {
-  const [step, setStep] = useState(1);
+  const location = useLocation();
   const [bookingData, setBookingData] = useState({
     specialty: '',
     clinic: null,
@@ -27,12 +21,11 @@ export default function Booking() {
     consultType: 'offline',
     payment: 'cash',
   });
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(null);
 
   const specialties = [
     { id: 'noi-khoa', name: 'Nội khoa', icon: '🏥' },
-    { id: 'nhi-khoa', name: 'Nhi khoa', icon: '👶' },
+    { id: 'khoa-nhi', name: 'Nhi khoa', icon: '👶' },
     { id: 'san-phu-khoa', name: 'Sản phụ khoa', icon: '🤰' },
     { id: 'rang-ham-mat', name: 'Răng hàm mặt', icon: '🦷' },
     { id: 'mat', name: 'Mắt', icon: '👁️' },
@@ -41,55 +34,7 @@ export default function Booking() {
     { id: 'tim-mach', name: 'Tim mạch', icon: '❤️' },
   ];
 
-  const clinics = [
-    {
-      id: 'clinic1',
-      name: 'Phòng khám MedPro - Quận 1',
-      address: '123 Nguyễn Huệ, Quận 1, TP.HCM',
-      distance: '2.5 km',
-      rating: 4.8,
-      specialties: ['noi-khoa', 'nhi-khoa', 'da-lieu', 'tim-mach'],
-    },
-    {
-      id: 'clinic2',
-      name: 'Phòng khám MedPro - Quận 3',
-      address: '456 Võ Văn Tần, Quận 3, TP.HCM',
-      distance: '3.2 km',
-      rating: 4.7,
-      specialties: ['noi-khoa', 'san-phu-khoa', 'tai-mui-hong'],
-    },
-    {
-      id: 'clinic3',
-      name: 'Phòng khám MedPro - Bình Thạnh',
-      address: '789 Điện Biên Phủ, Bình Thạnh, TP.HCM',
-      distance: '4.1 km',
-      rating: 4.9,
-      specialties: ['nhi-khoa', 'rang-ham-mat', 'mat', 'da-lieu'],
-    },
-    {
-      id: 'clinic4',
-      name: 'Phòng khám MedPro - Tân Bình',
-      address: '321 Cộng Hòa, Tân Bình, TP.HCM',
-      distance: '5.0 km',
-      rating: 4.6,
-      specialties: ['noi-khoa', 'tim-mach', 'tai-mui-hong', 'mat'],
-    },
-    {
-      id: 'clinic5',
-      name: 'Phòng khám MedPro - Phú Nhuận',
-      address: '567 Phan Xích Long, Phú Nhuận, TP.HCM',
-      distance: '3.8 km',
-      rating: 4.8,
-      specialties: ['san-phu-khoa', 'nhi-khoa', 'rang-ham-mat'],
-    },
-  ];
-
-  const handleInputChange = (field, value) => {
-    setBookingData((prev) => ({ ...prev, [field]: value }));
-  };
-
   const resetBooking = () => {
-    setStep(1);
     setBookingData({
       specialty: '',
       clinic: '',
@@ -102,82 +47,43 @@ export default function Booking() {
       reason: '',
       address: '',
     });
-    setShowConfirmation(false);
   };
 
-  const filteredClinics = clinics.filter((clinic) =>
-    clinic.specialties.includes(bookingData.specialty)
-  );
+  // Tính toán step hiện tại từ URL
+  const getCurrentStep = () => {
+    const path = location.pathname;
+    if (path === '/booking' || path === '/booking/') return 1;
+    if (path.includes('/clinics/') && !path.includes('/doctors/')) return 2;
+    if (path.includes('/doctors/')) return 3;
+    if (path.includes('/confirm')) return 4;
+    if (path.includes('/payment')) return 5;
+    if (path.includes('/success')) return 6;
+    return 1;
+  };
 
-  const selectedClinic = clinics.find((c) => c.id === bookingData.clinic);
-  const selectedSpecialty = specialties.find(
-    (s) => s.id === bookingData.specialty
-  );
-
-  console.log('CURRENT STEP:', step);
-  console.log('SHOW CONFIRMATION:', showConfirmation);
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 p-4 py-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <BookingHomePage step={step} />
+        {/* Header với progress bar */}
+        <BookingHomePage step={getCurrentStep()} />
 
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-          {/* Step 1: Chọn chuyên khoa */}
-          <StepSpecialty
-            step={step}
-            setStep={setStep}
-            specialties={specialties}
-            handleInputChange={handleInputChange}
-            bookingData={bookingData}
-          />
-
-          {/* Step 2: Chọn phòng khám */}
-          <StepClinic
-            step={step}
-            setStep={setStep}
-            selectedSpecialty={selectedSpecialty}
-            filteredClinics={filteredClinics}
-            handleInputChange={handleInputChange}
-            bookingData={bookingData}
-          />
-
-          {/* Step 3: Chọn bác sĩ và lịch */}
-          <StepSelectDoctor
-            step={step}
-            setStep={setStep}
-            selectedClinic={selectedClinic}
-            bookingData={bookingData}
-            handleInputChange={handleInputChange}
-          />
-
-          {/* Step 4: Payments */}
-          <StepConfirmPayment
-            step={step}
-            setStep={setStep}
-            bookingData={bookingData}
-            selectedSpecialty={selectedSpecialty}
-            selectedClinic={selectedClinic}
-            paymentMethod={paymentMethod}
-            setPaymentMethod={setPaymentMethod}
-          />
-
-          {/* Step 5: Thông tin cá nhân */}
-          <FormData
-            step={step}
-            setStep={setStep}
-            bookingData={bookingData}
-            handleInputChange={handleInputChange}
-          />
-
-          {/* Step 6: Success */}
-          <BookingSuccess
-            step={step}
-            bookingData={bookingData}
-            selectedSpecialty={selectedSpecialty}
-            selectedClinic={selectedClinic}
-            resetBooking={resetBooking}
+          {/* 
+            Outlet sẽ render component tương ứng với route:
+            - /booking → StepSpecialty
+            - /booking/clinics/:slug → StepClinic
+            - /booking/clinics/:specialtySlug/doctors/:clinicSlug → StepSelectDoctor
+            - etc...
+          */}
+          <Outlet
+            context={{
+              bookingData,
+              specialties,
+              paymentMethod,
+              setPaymentMethod,
+              resetBooking,
+            }}
           />
         </div>
       </div>

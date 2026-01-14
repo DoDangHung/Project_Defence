@@ -1,6 +1,6 @@
 import React from 'react';
 import { Calendar } from 'lucide-react';
-const StepSelectDate = ({ bookingData, handleInputChange }) => {
+const StepSelectDate = ({ handleInputChange }) => {
   return (
     <>
       <h3 className="font-bold text-gray-800 mb-4">Chọn ngày và giờ khám</h3>
@@ -11,7 +11,6 @@ const StepSelectDate = ({ bookingData, handleInputChange }) => {
           </label>
           <input
             type="date"
-            value={bookingData.date}
             onChange={(e) => handleInputChange('date', e.target.value)}
             min={new Date().toISOString().split('T')[0]}
             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-blue-600 focus:outline-none"

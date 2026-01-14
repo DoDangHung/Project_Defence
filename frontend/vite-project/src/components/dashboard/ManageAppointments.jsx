@@ -1,208 +1,64 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, ChevronDown } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  ChevronDown,
+  Clock,
+  User,
+  Stethoscope,
+  X,
+} from 'lucide-react';
 
 const ScheduleCalendar = () => {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 11, 15)); // December 2025
+  const [data, setData] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState('month');
   const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
-  // Mock events data
-  const events = [
-    {
-      id: 1,
-      title: 'Coffee with Ali',
-      date: 8,
-      time: '12:30 PM',
-      color: 'purple',
-    },
-    {
-      id: 2,
-      title: 'Marketing sit...',
-      date: 8,
-      time: '3:30 PM',
-      color: 'purple',
-    },
-    {
-      id: 3,
-      title: 'All-hands me...',
-      date: 11,
-      time: '5:00 PM',
-      color: 'red',
-    },
-    {
-      id: 4,
-      title: 'Dinner with C...',
-      date: 11,
-      time: '7:30 PM',
-      color: 'red',
-    },
-    {
-      id: 5,
-      title: 'Monday sta...',
-      date: 15,
-      time: '10:00 AM',
-      color: 'blue',
-    },
-    {
-      id: 6,
-      title: 'Content plan...',
-      date: 15,
-      time: '12:00 PM',
-      color: 'purple',
-    },
-    { id: 7, title: 'Product demo', date: 16, time: '11:30 AM', color: 'blue' },
-    { id: 8, title: 'Catch up w/...', date: 16, time: '3:30 PM', color: 'red' },
-    { id: 9, title: 'Deep work', date: 17, time: '10:00 AM', color: 'blue' },
-    {
-      id: 10,
-      title: 'One-on-one ...',
-      date: 17,
-      time: '11:00 AM',
-      color: 'red',
-    },
-    { id: 11, title: 'Design sync', date: 17, time: '11:30 AM', color: 'blue' },
-    {
-      id: 12,
-      title: 'Lunch with Oli...',
-      date: 18,
-      time: '1:00 PM',
-      color: 'red',
-    },
-    {
-      id: 13,
-      title: 'Friday stand...',
-      date: 19,
-      time: '10:00 AM',
-      color: 'blue',
-    },
-    {
-      id: 14,
-      title: 'Olivia x Riley',
-      date: 19,
-      time: '11:00 AM',
-      color: 'purple',
-    },
-    {
-      id: 15,
-      title: 'Product demo',
-      date: 19,
-      time: '2:30 PM',
-      color: 'purple',
-    },
-    {
-      id: 16,
-      title: 'House inspe...',
-      date: 20,
-      time: '12:00 PM',
-      color: 'red',
-    },
-    {
-      id: 17,
-      title: "Ava's enga...",
-      date: 21,
-      time: '2:00 PM',
-      color: 'purple',
-    },
-    { id: 18, title: 'Team lunch', date: 22, time: '1:15 PM', color: 'red' },
-    {
-      id: 19,
-      title: 'Product plan...',
-      date: 24,
-      time: '10:30 AM',
-      color: 'blue',
-    },
-    {
-      id: 20,
-      title: "Amelie's first...",
-      date: 25,
-      time: '11:00 AM',
-      color: 'red',
-    },
-    {
-      id: 21,
-      title: 'All-hands me...',
-      date: 25,
-      time: '5:00 PM',
-      color: 'red',
-    },
-    {
-      id: 22,
-      title: 'Coffee w/ A...',
-      date: 26,
-      time: '10:30 AM',
-      color: 'blue',
-    },
-    {
-      id: 23,
-      title: 'Design feedb...',
-      date: 26,
-      time: '3:30 PM',
-      color: 'red',
-    },
-    {
-      id: 24,
-      title: 'Half marathon',
-      date: 27,
-      time: '8:00 AM',
-      color: 'green',
-    },
-    { id: 25, title: 'Team offsite', date: 29, time: '', color: 'blue' },
-    { id: 26, title: 'Deep work', date: 29, time: '10:25 AM', color: 'blue' },
-    {
-      id: 27,
-      title: 'Quarterly re...',
-      date: 30,
-      time: '12:30 PM',
-      color: 'red',
-    },
-    {
-      id: 28,
-      title: 'Lunch with Z...',
-      date: 30,
-      time: '2:00 PM',
-      color: 'purple',
-    },
-    { id: 29, title: 'Deep work', date: 31, time: '10:00 AM', color: 'blue' },
-    {
-      id: 30,
-      title: 'Design sync',
-      date: 31,
-      time: '3:30 PM',
-      color: 'purple',
-    },
-    {
-      id: 31,
-      title: 'Amelie coffee',
-      date: 1,
-      time: '11:00 AM',
-      color: 'red',
-      nextMonth: true,
-    },
-    {
-      id: 32,
-      title: 'Dinner with C...',
-      date: 1,
-      time: '8:00 PM',
-      color: 'red',
-      nextMonth: true,
-    },
-    {
-      id: 33,
-      title: 'Accountant',
-      date: 2,
-      time: '2:45 PM',
-      color: 'purple',
-      nextMonth: true,
-    },
-    {
-      id: 34,
-      title: 'Marketing sit...',
-      date: 2,
-      time: '3:30 PM',
-      color: 'purple',
-      nextMonth: true,
-    },
-  ];
+  useEffect(() => {
+    setLoading(true);
+    fetch('http://localhost:8080/api/appointments')
+      .then((res) => res.json())
+      .then((response) => {
+        const events = response.data.map((apt) => ({
+          id: apt.id,
+          date: formatDate(apt.date),
+          patientName: `${apt.patient.user.firstName} ${apt.patient.user.lastName}`,
+          doctorName: `Dr. ${apt.doctor.user.firstName} ${apt.doctor.user.lastName}`,
+          title: `${apt.patient.user.firstName} ${apt.patient.user.lastName}`,
+          startTime: formatTime(apt.startTime),
+          endTime: formatTime(apt.endTime),
+          color:
+            apt.status === 'pending'
+              ? 'yellow'
+              : apt.status === 'confirmed'
+              ? 'green'
+              : 'blue',
+          reason: apt.reason,
+          status: apt.status,
+          clinicName: apt.clinic.name,
+          clinicAddress: apt.clinic.address,
+          specialization: apt.doctor.specialization,
+          patientPhone: apt.patient.user.phone,
+          patientEmail: apt.patient.user.email,
+          patientAge: apt.patient.age,
+          patientGender: apt.patient.gender,
+        }));
+
+        console.log('Calendar events:', events);
+        setData(events);
+        setLoading(false);
+      })
+      .catch((err) => {
+        setError('Không thể tải danh sách lịch hẹn');
+        console.error(err);
+        setLoading(false);
+      });
+  }, []);
 
   const monthNames = [
     'January',
@@ -220,6 +76,18 @@ const ScheduleCalendar = () => {
   ];
 
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const formatDate = (isoString) => {
+    return new Date(isoString).toISOString().split('T')[0];
+  };
+
+  const formatTime = (isoString) => {
+    return new Date(isoString).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
 
   const getDaysInMonth = (date) => {
     const year = date.getFullYear();
@@ -261,22 +129,38 @@ const ScheduleCalendar = () => {
     return days;
   };
 
-  const getEventsForDay = (day, isCurrentMonth, isPrevMonth) => {
-    if (isPrevMonth) return [];
-    if (!isCurrentMonth) {
-      return events.filter((e) => e.date === day && e.nextMonth);
-    }
-    return events.filter((e) => e.date === day && !e.nextMonth);
+  const getEventsForDay = (day, isCurrentMonth) => {
+    if (!isCurrentMonth) return [];
+
+    const month = currentDate.getMonth() + 1;
+    const year = currentDate.getFullYear();
+
+    const dayString = `${year}-${String(month).padStart(2, '0')}-${String(
+      day
+    ).padStart(2, '0')}`;
+
+    return data.filter((event) => event.date === dayString);
   };
 
   const getEventColor = (color) => {
     const colors = {
       blue: 'bg-blue-100 text-blue-700 border-blue-200',
+      green: 'bg-green-100 text-green-700 border-green-200',
+      yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
       red: 'bg-red-100 text-red-700 border-red-200',
       purple: 'bg-purple-100 text-purple-700 border-purple-200',
-      green: 'bg-green-100 text-green-700 border-green-200',
     };
     return colors[color] || colors.blue;
+  };
+
+  const getStatusBadge = (status) => {
+    const badges = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      confirmed: 'bg-green-100 text-green-800',
+      completed: 'bg-blue-100 text-blue-800',
+      cancelled: 'bg-red-100 text-red-800',
+    };
+    return badges[status] || badges.pending;
   };
 
   const navigateMonth = (direction) => {
@@ -303,8 +187,58 @@ const ScheduleCalendar = () => {
     setShowViewDropdown(false);
   };
 
+  const isToday = (day, isCurrentMonth) => {
+    if (!isCurrentMonth) return false;
+    const today = new Date();
+    return (
+      day === today.getDate() &&
+      currentDate.getMonth() === today.getMonth() &&
+      currentDate.getFullYear() === today.getFullYear()
+    );
+  };
+
+  const getWeekNumber = () => {
+    const firstDayOfMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      1
+    );
+    const firstDayOfYear = new Date(currentDate.getFullYear(), 0, 1);
+    const daysSinceFirstDay = Math.floor(
+      (firstDayOfMonth - firstDayOfYear) / (24 * 60 * 60 * 1000)
+    );
+    return Math.ceil((daysSinceFirstDay + firstDayOfYear.getDay() + 1) / 7);
+  };
+
   const days = getDaysInMonth(currentDate);
-  const weekNumber = 3;
+  const weekNumber = getWeekNumber();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải lịch hẹn...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Thử lại
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen -mt-7 p-6">
@@ -316,9 +250,11 @@ const ScheduleCalendar = () => {
             <div className="flex items-center gap-4">
               <div className="text-center">
                 <div className="text-sm text-gray-500 uppercase tracking-wide">
-                  DEC
+                  {monthNames[currentDate.getMonth()].substring(0, 3)}
                 </div>
-                <div className="text-3xl font-bold text-blue-600">15</div>
+                <div className="text-3xl font-bold text-blue-600">
+                  {new Date().getDate()}
+                </div>
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900">
@@ -327,7 +263,7 @@ const ScheduleCalendar = () => {
                 </div>
                 <div className="text-sm text-gray-500">Week {weekNumber}</div>
                 <div className="text-sm text-gray-400">
-                  Dec 1, 2025 – Dec 31, 2025
+                  {data.length} appointments
                 </div>
               </div>
             </div>
@@ -369,7 +305,6 @@ const ScheduleCalendar = () => {
                 <ChevronDown size={16} className="text-gray-500" />
               </button>
 
-              {/* Dropdown Menu */}
               {showViewDropdown && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
                   <div className="py-1">
@@ -421,7 +356,7 @@ const ScheduleCalendar = () => {
             <>
               {/* Week Day Headers */}
               <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
-                {weekDays.map((day, index) => (
+                {weekDays.map((day) => (
                   <div
                     key={day}
                     className="py-3 text-center text-sm font-semibold text-gray-600 border-r border-gray-200 last:border-r-0"
@@ -436,10 +371,12 @@ const ScheduleCalendar = () => {
                 {days.map((dayObj, index) => {
                   const dayEvents = getEventsForDay(
                     dayObj.day,
-                    dayObj.isCurrentMonth,
-                    dayObj.isPrevMonth
+                    dayObj.isCurrentMonth
                   );
-                  const isToday = dayObj.isCurrentMonth && dayObj.day === 15; // Hardcoded for demo
+                  const isTodayDate = isToday(
+                    dayObj.day,
+                    dayObj.isCurrentMonth
+                  );
                   const displayedEvents = dayEvents.slice(0, 3);
                   const moreCount = dayEvents.length - 3;
 
@@ -458,7 +395,7 @@ const ScheduleCalendar = () => {
                           className={`text-sm font-semibold ${
                             !dayObj.isCurrentMonth
                               ? 'text-gray-400'
-                              : isToday
+                              : isTodayDate
                               ? 'bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center'
                               : 'text-gray-900'
                           }`}
@@ -472,21 +409,26 @@ const ScheduleCalendar = () => {
                         {displayedEvents.map((event) => (
                           <div
                             key={event.id}
-                            className={`px-2 py-1 rounded text-xs font-medium border cursor-pointer hover:shadow-sm transition-shadow ${getEventColor(
+                            onClick={() => setSelectedEvent(event)}
+                            className={`px-2 py-1 rounded text-xs font-medium border cursor-pointer hover:shadow-md transition-all ${getEventColor(
                               event.color
                             )}`}
                           >
-                            <div className="truncate">
-                              {event.title}{' '}
-                              {event.time && (
-                                <span className="ml-1">{event.time}</span>
-                              )}
+                            <div className="truncate font-semibold">
+                              {event.patientName}
+                            </div>
+                            <div className="truncate text-xs opacity-75">
+                              {event.doctorName}
+                            </div>
+                            <div className="flex items-center gap-1 mt-0.5">
+                              <Clock size={10} />
+                              <span>{event.startTime}</span>
                             </div>
                           </div>
                         ))}
                         {moreCount > 0 && (
-                          <button className="text-xs text-gray-600 hover:text-gray-900 font-medium">
-                            {moreCount} more...
+                          <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                            +{moreCount} more
                           </button>
                         )}
                       </div>
@@ -503,12 +445,7 @@ const ScheduleCalendar = () => {
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 Week View
               </h3>
-              <p className="text-gray-600">
-                Week view will show 7 days with hourly time slots
-              </p>
-              <div className="mt-4 text-sm text-gray-500">
-                December 14 - December 20, 2025
-              </div>
+              <p className="text-gray-600">Week view coming soon...</p>
             </div>
           )}
 
@@ -518,16 +455,145 @@ const ScheduleCalendar = () => {
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
                 Day View
               </h3>
-              <p className="text-gray-600">
-                Day view will show hourly schedule for a single day
-              </p>
-              <div className="mt-4 text-sm text-gray-500">
-                Monday, December 15, 2025
-              </div>
+              <p className="text-gray-600">Day view coming soon...</p>
             </div>
           )}
         </div>
       </div>
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0  flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div
+              className={`p-6 border-b ${getEventColor(
+                selectedEvent.color
+              )} border-transparent`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold">
+                      {selectedEvent.patientName}
+                    </h2>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadge(
+                        selectedEvent.status
+                      )}`}
+                    >
+                      {selectedEvent.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <p className="text-sm opacity-75">Appointment Details</p>
+                </div>
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="p-2 hover:bg-white hover:bg-opacity-50 rounded-lg transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-6">
+              {/* Time & Date */}
+              <div className="flex items-start gap-3">
+                <Clock className="text-blue-600 mt-1" size={20} />
+                <div>
+                  <div className="font-semibold text-gray-900">Time & Date</div>
+                  <div className="text-gray-600">{selectedEvent.date}</div>
+                  <div className="text-gray-600">
+                    {selectedEvent.startTime} - {selectedEvent.endTime}
+                  </div>
+                </div>
+              </div>
+
+              {/* Doctor */}
+              <div className="flex items-start gap-3">
+                <Stethoscope className="text-green-600 mt-1" size={20} />
+                <div>
+                  <div className="font-semibold text-gray-900">Doctor</div>
+                  <div className="text-gray-600">
+                    {selectedEvent.doctorName}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {selectedEvent.specialization}
+                  </div>
+                </div>
+              </div>
+
+              {/* Patient Info */}
+              <div className="flex items-start gap-3">
+                <User className="text-purple-600 mt-1" size={20} />
+                <div className="flex-1">
+                  <div className="font-semibold text-gray-900">
+                    Patient Information
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 mt-2">
+                    <div>
+                      <div className="text-sm text-gray-500">Email</div>
+                      <div className="text-gray-600">
+                        {selectedEvent.patientEmail}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Phone</div>
+                      <div className="text-gray-600">
+                        {selectedEvent.patientPhone}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Age</div>
+                      <div className="text-gray-600">
+                        {selectedEvent.patientAge} years
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-gray-500">Gender</div>
+                      <div className="text-gray-600 capitalize">
+                        {selectedEvent.patientGender}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Reason */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="font-semibold text-gray-900 mb-2">
+                  Reason for Visit
+                </div>
+                <div className="text-gray-600">{selectedEvent.reason}</div>
+              </div>
+
+              {/* Clinic */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="font-semibold text-gray-900 mb-2">
+                  Clinic Location
+                </div>
+                <div className="text-gray-600 font-medium">
+                  {selectedEvent.clinicName}
+                </div>
+                <div className="text-sm text-gray-500">
+                  {selectedEvent.clinicAddress}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 border-t bg-gray-50 flex gap-3">
+              <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                Edit Appointment
+              </button>
+              <button className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
+                Cancel Appointment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

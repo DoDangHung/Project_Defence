@@ -16,7 +16,6 @@ const createAdmin = async (userData) => {
     city,
     state,
     postalCode,
-    department,
     position,
   } = userData;
 
@@ -57,7 +56,6 @@ const createAdmin = async (userData) => {
     const admin = await tx.admin.create({
       data: {
         userId: user.id,
-        department: department || null,
         position: position || null,
       },
     });
@@ -356,7 +354,7 @@ const getAllUsers = async (filters = {}) => {
 };
 
 // Cập nhật user
-const updateUser = async (id, userData) => {
+const updateUser = async (id, userData = {}) => {
   const {
     firstName,
     lastName,
@@ -372,6 +370,7 @@ const updateUser = async (id, userData) => {
   } = userData;
 
   const updateData = {};
+
   if (firstName) updateData.firstName = firstName;
   if (lastName) updateData.lastName = lastName;
   if (phone !== undefined) updateData.phone = phone;
@@ -383,7 +382,11 @@ const updateUser = async (id, userData) => {
   if (state !== undefined) updateData.state = state;
   if (postalCode !== undefined) updateData.postalCode = postalCode;
   if (status) updateData.status = status;
-  if (avatar !== undefined) updateData.avatar = avatar;
+  if (avatar !== undefined) updateData.avatar = avatar; // Đường dẫn file mới
+
+  if (Object.keys(updateData).length === 0) {
+    throw new Error('No valid fields to update');
+  }
 
   const user = await prisma.user.update({
     where: { id: parseInt(id) },

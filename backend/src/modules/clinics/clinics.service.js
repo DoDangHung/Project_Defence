@@ -18,7 +18,15 @@ const createSlug = (name) => {
 export const clinicService = {
   // Lấy tất cả clinics
   getAllClinics: async (filters = {}) => {
-    const { page = 1, limit = 10, search, city, district, isActive } = filters;
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      city,
+      district,
+      isActive,
+      slug,
+    } = filters;
 
     const where = {};
 
@@ -31,6 +39,8 @@ export const clinicService = {
     // Filter theo isActive
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
+    //Filter theo slug
+    if (slug) where.slug = { contains: slug, mode: 'insensitive' };
     // Search theo name, address, email, phone
     if (search) {
       where.OR = [
@@ -91,6 +101,8 @@ export const clinicService = {
       },
     };
   },
+
+  //lay clinic theo specialties
 
   // Lấy clinic theo ID
   getClinicById: async (id) => {
@@ -374,6 +386,62 @@ export const clinicService = {
     return clinic;
   },
 
+  assignSpecialtiesToClinic: async (clinicId, specialtyIds) => {
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicId },
+    });
+    if (!clinic) throw new Error('Clinic not found');
+    const existingSpecialties = await prisma.specialty.findMany({
+      where: { id: { in: specialtyIds } },
+      select: { id: true },
+    });
+    const existingIds = existingSpecialties.map((s) => s.id);
+
+    if (existingIds.length !== specialtyIds.length) {
+      throw new Error('Some specialties not found');
+    }
+
+    // 3. Gán (không bị trùng)
+    await prisma.clinicSpecialty.createMany({
+      data: specialtyIds.map((sid) => ({
+        clinicId,
+        specialtyId: sid,
+      })),
+      skipDuplicates: true,
+    });
+
+    return { message: 'Specialties assigned successfully' };
+  },
+
+  assignDoctorsToClinic: async (clinicId, doctorIds) => {
+    // 1. Check clinic exists
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicId },
+    });
+    if (!clinic) throw new Error('Clinic not found');
+
+    // 2. Optional: check doctors exist
+    const validDoctors = await prisma.doctor.findMany({
+      where: { id: { in: doctorIds } },
+    });
+
+    if (validDoctors.length !== doctorIds.length) {
+      throw new Error('Some doctors not found');
+    }
+
+    // 3. Replace old relations with new ones
+    await prisma.clinic.update({
+      where: { id: clinicId },
+      data: {
+        doctors: {
+          set: doctorIds.map((id) => ({ id })),
+        },
+      },
+    });
+
+    return { message: 'Doctors assigned successfully' };
+  },
+
   // Cập nhật clinic
   updateClinic: async (id, data) => {
     const {
@@ -490,12 +558,23 @@ export const clinicService = {
 
   // Lấy danh sách bác sĩ của clinic
   getClinicDoctors: async (clinicId, filters = {}) => {
+    // Debug: Kiểm tra clinicId
+    console.log('clinicId received:', clinicId, typeof clinicId);
+
+    // Validate clinicId
+    if (!clinicId || isNaN(parseInt(clinicId))) {
+      throw new Error('Invalid clinic ID');
+    }
+
     const { page = 1, limit = 10, specialization } = filters;
+
+    const parsedClinicId = parseInt(clinicId);
+    console.log('parsedClinicId:', parsedClinicId);
 
     const where = {
       clinics: {
         some: {
-          id: parseInt(clinicId),
+          id: parsedClinicId,
         },
       },
     };
@@ -503,6 +582,8 @@ export const clinicService = {
     if (specialization) {
       where.specialization = { contains: specialization, mode: 'insensitive' };
     }
+
+    console.log('where condition:', JSON.stringify(where, null, 2));
 
     const skip = (page - 1) * limit;
 

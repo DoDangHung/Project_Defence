@@ -39,6 +39,22 @@ export const getDoctorById = async (id) => {
   });
 };
 
+export const getDoctorsByClinic = async (clinicId) => {
+  return prisma.doctor.findMany({
+    where: {
+      clinics: {
+        some: {
+          id: clinicId,
+        },
+      },
+    },
+    include: {
+      user: true,
+      specialties: true, // nếu bạn dùng mảng specialties
+    },
+  });
+};
+
 export const getDoctorsByDepartment = async (departmentId) => {
   return prisma.doctor.findMany({
     where: { departmentId: Number(departmentId) },

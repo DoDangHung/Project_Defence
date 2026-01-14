@@ -12,6 +12,14 @@ router.post(
   clinicsController.createClinic
 );
 router.get('/statistics', clinicsController.getClinicStatistics);
+router.post(
+  '/:clinicId/specialties',
+  clinicsController.assignSpecialtiesToClinic
+);
+router.get('/:clinicId/specialties', clinicsController.getClinicSpecialties);
+// Đảm bảo route có :id parameter
+router.get('/:id/doctors', clinicsController.getClinicDoctors);
+router.post('/:clinicId/doctors', clinicsController.assignDoctorsToClinic);
 router.get('/nearby', clinicsController.searchClinicsNearby);
 router.get('/slug/:slug', clinicsController.getClinicBySlug);
 // CRUD operations

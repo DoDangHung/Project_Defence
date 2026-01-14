@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userController = require('../users/user.controller.js');
-
+const { uploadAvatar } = require('../../config/multer.js');
 // Middleware validation (optional - có thể thêm sau)
 // const { validateAdmin, validateDoctor, validatePatient, validateNurse } = require('../middleware/validation');
 
@@ -19,7 +19,7 @@ router.post('/patient', userController.createPatient);
 router.post('/nurse', userController.createNurse);
 
 // Update user
-router.put('/:id', userController.updateUser);
+router.put('/:id', uploadAvatar.single('avatar'), userController.updateUser);
 router.put('/:id/password', userController.changePassword);
 
 // Delete user

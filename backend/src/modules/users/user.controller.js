@@ -115,10 +115,18 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// PUT /api/users/:id
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
+
+    console.log('req.body:', req.body);
+    console.log('req.file:', req.file);
+
+    // Nếu upload avatar mới -> lưu url cloudinary
+    if (req.file) {
+      req.body.avatar = req.file.path;
+    }
+
     const user = await userService.updateUser(id, req.body);
 
     res.status(200).json({
@@ -127,6 +135,7 @@ const updateUser = async (req, res) => {
       data: user,
     });
   } catch (error) {
+    console.error('Update user error:', error);
     res.status(400).json({
       success: false,
       message: 'Error updating user',

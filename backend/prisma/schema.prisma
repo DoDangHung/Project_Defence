@@ -331,6 +331,7 @@ model Doctor {
 
   departmentId Int?
   department   Department? @relation(fields: [departmentId], references: [id])
+  isActive    Boolean @default(true)
 
   schedules              Schedule[]
   appointments           Appointment[]
@@ -372,7 +373,8 @@ model Schedule {
   startTime   DateTime
   endTime     DateTime
   isAvailable Boolean  @default(true)
-
+  slotDuration Int       @default(60) // Độ dài mỗi slot (phút)
+  totalSlots   Int       @default(1) // ← Thêm default// Tổng số slot
   doctor       Doctor        @relation(fields: [doctorId], references: [id])
   appointments Appointment[]
 }
@@ -386,6 +388,9 @@ model Appointment {
   date       DateTime
   startTime  DateTime
   endTime    DateTime
+ slotIndex  Int      @default(0)           // ← Thêm default
+  slotStart  DateTime @default(now())       // ← Thêm default
+  slotEnd    DateTime @default(now())  
   reason     String?
   status     String   @default("pending")
 

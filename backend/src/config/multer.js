@@ -32,8 +32,13 @@ export const clinicImageStorage = new CloudinaryStorage({
   },
 });
 
-export const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
+const fileFilter = (req, file, cb) => {
+  console.log('File mimetype:', file.mimetype);
+  console.log('File originalname:', file.originalname);
+
+  const allowedMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+
+  if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
     cb(new Error('Only image files are allowed!'), false);

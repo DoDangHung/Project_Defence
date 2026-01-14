@@ -10,4 +10,5 @@ router.get('/by-department/:id', DoctorController.getDoctorsByDepartment);
 router.post('/', DoctorController.createDoctor);
 router.put('/:id', DoctorController.updateDoctor);
 router.delete('/:id', DoctorController.deteleDoctor);
+
 export default router;

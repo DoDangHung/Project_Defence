@@ -1,3 +1,4 @@
+import prisma from '../../config/db.js';
 import { clinicService } from './clinics.service.js';
 
 // TẠO CLINIC VỚI LOGO VÀ IMAGES
@@ -21,6 +22,52 @@ export const clinicsController = {
     }
   },
 
+  assignSpecialtiesToClinic: async (req, res) => {
+    try {
+      const { clinicId } = req.params;
+      const { specialtyIds } = req.body;
+
+      if (!clinicId || !Array.isArray(specialtyIds)) {
+        return res.status(400).json({
+          success: false,
+          message: 'clinicId and specialtyIds are required',
+        });
+      }
+
+      const result = await clinicService.assignSpecialtiesToClinic(
+        Number(clinicId),
+        specialtyIds.map(Number)
+      );
+      res.status(200).json({
+        success: true,
+        message: 'Specialties assigned to clinic successfully',
+        data: result,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error assigning specialties to clinic',
+        error: error.message,
+      });
+    }
+  },
+
+  assignDoctorsToClinic: async (req, res) => {
+    try {
+      const clinicId = Number(req.params.clinicId);
+      const { doctorIds } = req.body;
+
+      const result = await clinicService.assignDoctorsToClinic(
+        clinicId,
+        doctorIds
+      );
+
+      res.json({ success: true, ...result });
+    } catch (err) {
+      res.status(400).json({ success: false, message: err.message });
+    }
+  },
+
   // GET /api/clinics/:id
   getClinicById: async (req, res) => {
     try {
@@ -37,6 +84,27 @@ export const clinicsController = {
         success: false,
         message: error.message,
       });
+    }
+  },
+
+  getClinicSpecialties: async (req, res) => {
+    try {
+      const { clinicId } = req.params;
+
+      const specialties = await prisma.clinicSpecialty.findMany({
+        where: { clinicId: Number(clinicId) },
+        include: {
+          specialty: true,
+        },
+      });
+
+      return res.json({
+        success: true,
+        data: specialties.map((cs) => cs.specialty),
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ success: false, message: 'Server error' });
     }
   },
 
@@ -172,6 +240,15 @@ export const clinicsController = {
   getClinicDoctors: async (req, res) => {
     try {
       const { id } = req.params;
+      console.log('Controller - clinicId from params:', id); // Debug
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: 'Clinic ID is required',
+        });
+      }
+
       const filters = req.query;
       const result = await clinicService.getClinicDoctors(id, filters);
 
@@ -181,6 +258,7 @@ export const clinicsController = {
         ...result,
       });
     } catch (error) {
+      console.error('Error in getClinicDoctors:', error);
       res.status(500).json({
         success: false,
         message: 'Error retrieving clinic doctors',

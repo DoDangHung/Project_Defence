@@ -4,23 +4,27 @@ import prisma from '../../config/db.js';
 
 export const schedulesService = {
   // Helper: Tạo slots từ startTime và endTime
-  generateTimeSlots: (startTime, endTime, slotDuration = 60) => {
+  generateTimeSlots: (startTime, endTime, slotDuration, scheduleId) => {
     const slots = [];
-    let currentTime = new Date(startTime);
+    const start = new Date(startTime);
     const end = new Date(endTime);
 
-    while (currentTime < end) {
-      const slotStart = new Date(currentTime);
-      const slotEnd = new Date(
-        currentTime.getTime() + slotDuration * 60 * 1000
-      );
+    let currentTime = new Date(start);
+    let index = 0;
 
-      // Đảm bảo không vượt quá endTime
+    while (currentTime < end) {
+      const slotEnd = new Date(currentTime.getTime() + slotDuration * 60000);
+
+      // Chỉ thêm slot nếu slotEnd không vượt quá endTime
       if (slotEnd <= end) {
         slots.push({
-          start: slotStart,
+          id: `${scheduleId}-${index}`,
+          index: index,
+          start: new Date(currentTime),
           end: slotEnd,
+          isBooked: false,
         });
+        index++;
       }
 
       currentTime = slotEnd;
@@ -31,12 +35,49 @@ export const schedulesService = {
 
   // Tạo schedule
   createSchedules: async (data) => {
-    const { doctorId, date, startTime, endTime, slotDuration = 60 } = data;
+    const {
+      doctorId,
+      date,
+      startTime,
+      endTime,
+      roomId,
+      slotDuration = 60,
+    } = data;
+
+    // Validate và convert sang Number
+    const doctorIdNum = parseInt(doctorId);
+    const roomIdNum = parseInt(roomId);
+
+    if (isNaN(doctorIdNum)) {
+      throw new Error('doctorId không hợp lệ');
+    }
+
+    if (isNaN(roomIdNum)) {
+      throw new Error('roomId không hợp lệ');
+    }
+
+    // Kiểm tra Doctor có tồn tại
+    const doctor = await prisma.doctor.findUnique({
+      where: { id: doctorIdNum },
+    });
+
+    if (!doctor) {
+      throw new Error(`Doctor với ID ${doctorIdNum} không tồn tại`);
+    }
+
+    // Kiểm tra Room có tồn tại
+    const room = await prisma.room.findUnique({
+      where: { id: roomIdNum },
+    });
+
+    if (!room) {
+      throw new Error(`Room với ID ${roomIdNum} không tồn tại`);
+    }
 
     // Check overlap
     const overlap = await prisma.schedule.findFirst({
       where: {
-        doctorId: Number(doctorId),
+        doctorId: doctorIdNum,
         date: new Date(date),
         AND: [
           { startTime: { lt: new Date(endTime) } },
@@ -59,12 +100,17 @@ export const schedulesService = {
     // Tạo schedule
     return prisma.schedule.create({
       data: {
-        doctorId: Number(doctorId),
+        doctorId: doctorIdNum,
+        roomId: roomIdNum,
         date: new Date(date),
         startTime: new Date(startTime),
         endTime: new Date(endTime),
-        slotDuration,
+        slotDuration: parseInt(slotDuration),
         totalSlots: slots.length,
+      },
+      include: {
+        doctor: true,
+        room: true,
       },
     });
   },
@@ -74,7 +120,14 @@ export const schedulesService = {
     const schedules = await prisma.schedule.findMany({
       where: { doctorId },
       include: {
-        appointments: true, // Lấy appointments đã book
+        appointments: true,
+        room: true,
+        doctor: {
+          include: {
+            specialties: true, // Bác sĩ thuộc chuyên khoa nào
+            clinics: true, // Danh sách phòng khám bác sĩ làm
+          },
+        },
       },
       orderBy: { date: 'asc' },
     });
@@ -84,7 +137,8 @@ export const schedulesService = {
       const slots = schedulesService.generateTimeSlots(
         schedule.startTime,
         schedule.endTime,
-        schedule.slotDuration
+        schedule.slotDuration,
+        schedule.roomId
       );
 
       // Đánh dấu slot nào đã book

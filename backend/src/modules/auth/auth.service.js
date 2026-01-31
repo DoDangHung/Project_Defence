@@ -52,7 +52,7 @@ const authService = {
         roleName: user.role.name,
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' },
     );
 
     // Chuẩn bị response data
@@ -137,7 +137,7 @@ const authService = {
         roleName: decoded.roleName,
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' },
     );
 
     return newToken;
@@ -151,7 +151,6 @@ const authService = {
     return {
       user,
       accessToken: generateAccessToken(payload),
-      refreshToken: refreshToken(payload),
     };
   },
 };

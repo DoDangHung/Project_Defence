@@ -7,7 +7,7 @@ class SpecialtyService {
   async getAllSpecialties(filters = {}) {
     const {
       page = 1,
-      limit = 10,
+      limit = 40,
       search = '',
       isActive,
       sortBy = 'priority',
@@ -279,7 +279,7 @@ class SpecialtyService {
     if (specialty._count.doctors > 0 || specialty._count.clinics > 0) {
       if (hardDelete) {
         throw new Error(
-          'Cannot delete specialty with related doctors or clinics'
+          'Cannot delete specialty with related doctors or clinics',
         );
       }
       // Soft delete

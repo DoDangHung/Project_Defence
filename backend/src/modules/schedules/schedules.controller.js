@@ -9,6 +9,7 @@ export const scheduleController = {
       console.log('req.user:', req.user);
       console.log('req.user.doctorId:', req.user?.doctorId);
       console.log('=================================');
+      console.log('Request body:', req.body);
       const doctorId = req.user?.doctorId;
       if (!doctorId) {
         return res.status(400).json({
@@ -18,7 +19,7 @@ export const scheduleController = {
         });
       }
 
-      const { date, startTime, endTime, slotDuration = 60 } = req.body;
+      const { date, roomId, startTime, endTime, slotDuration = 60 } = req.body;
 
       if (!date || !startTime || !endTime) {
         return res.status(400).json({
@@ -50,6 +51,7 @@ export const scheduleController = {
       // Tạo schedule với slots
       const schedule = await schedulesService.createSchedules({
         doctorId,
+        roomId,
         date: parsedDate,
         startTime: parsedStart,
         endTime: parsedEnd,

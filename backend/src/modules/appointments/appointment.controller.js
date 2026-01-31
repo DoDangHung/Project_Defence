@@ -65,7 +65,7 @@ export const AppointmentController = {
       const { id } = req.params;
       const appointment = await appointmentService.updateAppointment(
         id,
-        req.body
+        req.body,
       );
 
       res.status(200).json({
@@ -137,7 +137,7 @@ export const AppointmentController = {
       const filters = req.query;
       const result = await appointmentService.getPatientAppointments(
         patientId,
-        filters
+        filters,
       );
 
       res.status(200).json({
@@ -161,7 +161,7 @@ export const AppointmentController = {
       const filters = req.query;
       const result = await appointmentService.getDoctorAppointments(
         doctorId,
-        filters
+        filters,
       );
 
       res.status(200).json({
@@ -185,7 +185,7 @@ export const AppointmentController = {
       const filters = req.query;
       const result = await appointmentService.getClinicAppointments(
         clinicId,
-        filters
+        filters,
       );
 
       res.status(200).json({
@@ -217,6 +217,91 @@ export const AppointmentController = {
       res.status(500).json({
         success: false,
         message: 'Error retrieving appointment statistics',
+        error: error.message,
+      });
+    }
+  },
+
+  // PATCH /api/appointments/:id/confirm
+  confirmAppointment: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { doctorId } = req.body; // Optional: để verify quyền
+
+      const appointment = await appointmentService.confirmAppointment(
+        id,
+        doctorId,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Appointment confirmed successfully',
+        data: appointment,
+      });
+    } catch (error) {
+      const statusCode = error.message.includes('not found') ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: 'Error confirming appointment',
+        error: error.message,
+      });
+    }
+  },
+
+  // PATCH /api/appointments/:id/reschedule
+  rescheduleAppointment: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const rescheduleData = req.body;
+
+      if (!rescheduleData.startTime || !rescheduleData.endTime) {
+        return res.status(400).json({
+          success: false,
+          message: 'Start time and end time are required',
+        });
+      }
+
+      const appointment = await appointmentService.rescheduleAppointment(
+        id,
+        rescheduleData,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Appointment rescheduled successfully',
+        data: appointment,
+      });
+    } catch (error) {
+      const statusCode = error.message.includes('not found') ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: 'Error rescheduling appointment',
+        error: error.message,
+      });
+    }
+  },
+
+  // PATCH /api/appointments/:id/cancel
+  cancelAppointment: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { cancelReason, cancelledBy } = req.body;
+
+      const appointment = await appointmentService.cancelAppointment(id, {
+        cancelReason,
+        cancelledBy,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: 'Appointment cancelled successfully',
+        data: appointment,
+      });
+    } catch (error) {
+      const statusCode = error.message.includes('not found') ? 404 : 400;
+      res.status(statusCode).json({
+        success: false,
+        message: 'Error cancelling appointment',
         error: error.message,
       });
     }

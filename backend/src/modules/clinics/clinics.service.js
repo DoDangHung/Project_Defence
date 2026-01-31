@@ -601,6 +601,7 @@ export const clinicService = {
               avatar: true,
             },
           },
+          clinics: true,
           _count: {
             select: {
               appointments: true,
@@ -782,7 +783,7 @@ export const clinicService = {
 
     // Sắp xếp theo khoảng cách
     nearbyClinics.sort(
-      (a, b) => parseFloat(a.distance) - parseFloat(b.distance)
+      (a, b) => parseFloat(a.distance) - parseFloat(b.distance),
     );
 
     return nearbyClinics;

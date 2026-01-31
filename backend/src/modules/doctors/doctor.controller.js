@@ -89,6 +89,32 @@ export const getDoctorsByDepartment = async (req, res) => {
   }
 };
 
+export const getDoctorPatientsDashboard = async (req, res) => {
+  try {
+    const doctorId = req.user.doctorId;
+
+    if (!doctorId) {
+      return res.status(400).json({
+        success: false,
+        message: 'DoctorId not found in token',
+      });
+    }
+
+    const data = await DoctorModel.getDoctorPatientsWithStats(doctorId);
+
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: 'Không thể lấy dữ liệu Doctor Dashboard',
+    });
+  }
+};
+
 export const filterDoctorsCtrl = async (req, res) => {
   try {
     const result = await DoctorModel.getFilteredDoctors(req.query);

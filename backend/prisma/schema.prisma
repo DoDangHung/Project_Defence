@@ -48,11 +48,9 @@ model User {
   admin            Admin?
   patient          Patient?
   doctor           Doctor?
-  nurse            Nurse[]
   notifications    Notification[]
   sentMessages     Message[]      @relation("SentMessages")
   receivedMessages Message[]      @relation("ReceivedMessages")
-  auditLogs        AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -142,30 +140,12 @@ model Room {
   roomNumber String @unique
   type       String // ICU, General, Private, Emergency
   status     String @default("available") // available, full, maintenance
-
-  beds       Bed[]
+  schedules  Schedule[]   
   admissions Admission[]
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
 }
 
-// ====================================
-// BED MODEL
-// ====================================
-
-model Bed {
-  id        Int    @id @default(autoincrement())
-  bedNumber String
-  status    String @default("available") // available, occupied, cleaning
-
-  roomId Int
-  room   Room @relation(fields: [roomId], references: [id])
-
-  admissions Admission[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
 
 // ====================================
 // ADMINSSION MODEL
@@ -175,9 +155,7 @@ model Admission {
   id        Int  @id @default(autoincrement())
   patientId Int
   doctorId  Int?
-  nurseId   Int?
   roomId    Int?
-  bedId     Int?
 
   admissionDate DateTime  @default(now())
   dischargeDate DateTime?
@@ -188,12 +166,10 @@ model Admission {
 
   patient Patient @relation(fields: [patientId], references: [id])
   doctor  Doctor? @relation(fields: [doctorId], references: [id])
-  nurse   Nurse?  @relation(fields: [nurseId], references: [id])
   room    Room?   @relation(fields: [roomId], references: [id])
-  bed     Bed?    @relation(fields: [bedId], references: [id])
 
   finance                Finance[]
-  conditionStatesUpdated ConditionState[]
+
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
 }
@@ -243,47 +219,6 @@ model Satisfaction {
 }
 
 // ====================================
-// ConditionState MODEL
-// ====================================
-
-model ConditionState {
-  id          Int  @id @default(autoincrement())
-  patientId   Int
-  admissionId Int?
-
-  condition String? // Stable, Critical, Severe, Improving, Normal
-  notes     String?
-
-  updatedByDoctorId Int?
-  updatedByDoctor   Doctor? @relation(fields: [updatedByDoctorId], references: [id])
-
-  patient   Patient    @relation(fields: [patientId], references: [id])
-  admission Admission? @relation(fields: [admissionId], references: [id])
-
-  createdAt DateTime @default(now())
-}
-
-// ====================================
-// NURSE MODEL
-// ====================================
-
-model Nurse {
-  id           Int     @id @default(autoincrement())
-  userId       Int     @unique
-  shift        String?
-  salary       Float?
-  departmentId Int?
-
-  user       User        @relation(fields: [userId], references: [id])
-  department Department? @relation(fields: [departmentId], references: [id])
-
-  admissions Admission[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-// ====================================
 // PATIENT MODEL
 // ====================================
 
@@ -296,27 +231,16 @@ model Patient {
   gender                 String?
   admissions             Admission[]
   finances               Finance[]
-  prescription           Prescription[]
-  medicalRecord          MedicalRecord[]
   payment                Payment[]
   feedback               Feedback[]
   appointment            Appointment[]
   satisfaction           Satisfaction[]
-  conditionStatesUpdated ConditionState[]
+
 }
 
 // ====================================
-// DEPARTMENT & DOCTOR MODELS
+//  DOCTOR MODELS
 // ====================================
-
-model Department {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-
-  doctors Doctor[]
-  nurses  Nurse[]
-}
 
 
 model Doctor {
@@ -328,23 +252,17 @@ model Doctor {
   experience     Int?
   bio            String?
   rating         Float?  @default(0.0)
-
-  departmentId Int?
-  department   Department? @relation(fields: [departmentId], references: [id])
   isActive    Boolean @default(true)
 
   schedules              Schedule[]
   appointments           Appointment[]
   feedbacks              Feedback[]
-  medicalRecords         MedicalRecord[]
-  prescriptions          Prescription[]
   availability           Availability[]
   satisfaction           Satisfaction[]
   admissions             Admission[]
   // Relations
   specialties            Specialty[]
   clinics                Clinic[]         @relation("DoctorClinics") // Thêm tên relation
-  conditionStatesUpdated ConditionState[]
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
 }
@@ -372,10 +290,14 @@ model Schedule {
   date        DateTime
   startTime   DateTime
   endTime     DateTime
+  slotStart  DateTime @default(now())       // ← Thêm default
+  slotEnd    DateTime @default(now())  
   isAvailable Boolean  @default(true)
+  roomId      Int   
   slotDuration Int       @default(60) // Độ dài mỗi slot (phút)
   totalSlots   Int       @default(1) // ← Thêm default// Tổng số slot
   doctor       Doctor        @relation(fields: [doctorId], references: [id])
+  room         Room?     @relation(fields: [roomId], references: [id])
   appointments Appointment[]
 }
 
@@ -388,12 +310,11 @@ model Appointment {
   date       DateTime
   startTime  DateTime
   endTime    DateTime
- slotIndex  Int      @default(0)           // ← Thêm default
+  slotIndex  Int      @default(0)           // ← Thêm default
   slotStart  DateTime @default(now())       // ← Thêm default
   slotEnd    DateTime @default(now())  
   reason     String?
   status     String   @default("pending")
-
   patient  Patient   @relation(fields: [patientId], references: [id])
   schedule Schedule? @relation(fields: [scheduleId], references: [id])
   clinic   Clinic    @relation(fields: [clinicId], references: [id])
@@ -487,53 +408,16 @@ model Payment {
 // PAYMENT TRANSACTION LOG (Optional - for audit)
 // ====================================
 
-model PaymentTransaction {
-  id              Int      @id @default(autoincrement())
-  paymentId       Int
-  transactionType String // deposit, final_payment, refund, additional_charge
-  amount          Float
-  status          String // success, failed, pending
-  provider        String // stripe, payos, cash
-  transactionId   String? // External transaction ID
-  metadata        Json? // Extra info from gateway
-  createdAt       DateTime @default(now())
 
-  @@index([paymentId])
-  @@index([transactionId])
-}
+
+
+
+
+
+
 
 // ====================================
-// MEDICAL RECORD & PRESCRIPTION MODELS
-// ====================================
-
-model MedicalRecord {
-  id        Int      @id @default(autoincrement())
-  doctorId  Int
-  patientId Int
-  diagnosis String
-  treatment String?
-  notes     String?
-  date      DateTime @default(now())
-
-  doctor  Doctor  @relation(fields: [doctorId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
-}
-
-model Prescription {
-  id           Int      @id @default(autoincrement())
-  doctorId     Int
-  patientId    Int
-  medication   String
-  dosage       String
-  instructions String?
-  createdAt    DateTime @default(now())
-
-  doctor  Doctor  @relation(fields: [doctorId], references: [id])
-  patient Patient @relation(fields: [patientId], references: [id])
-}
-
-// ====================================
-// MESSAGE, NOTIFICATION, AUDIT LOG
+// MESSAGE, NOTIFICATION
 // ====================================
 
 model Message {
@@ -558,13 +442,4 @@ model Notification {
   user User @relation(fields: [userId], references: [id])
 }
 
-model AuditLog {
-  id        Int      @id @default(autoincrement())
-  userId    Int?
-  action    String
-  entity    String
-  details   String?
-  createdAt DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id])
-}

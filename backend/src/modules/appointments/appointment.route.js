@@ -19,4 +19,12 @@ router.patch('/:id/status', AppointmentController.updateStatus);
 
 router.delete('/:id', AppointmentController.deleteAppointment);
 
+// 🆕 Các action mới
+router.patch('/:id/confirm', AppointmentController.confirmAppointment);
+router.patch('/:id/reschedule', AppointmentController.rescheduleAppointment);
+router.patch('/:id/cancel', AppointmentController.cancelAppointment);
+router.patch('/:id/status', AppointmentController.updateStatus);
+
+router.delete('/:id', AppointmentController.deleteAppointment);
+
 export default router;

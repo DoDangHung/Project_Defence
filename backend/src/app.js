@@ -15,6 +15,9 @@ import appointmentRoutes from './modules/appointments/appointment.route.js';
 import patientRoutes from './modules/patients/patient.route.js';
 import specialtyRoutes from './modules/specialty/specialty.routes.js';
 import clinicRoutes from './modules/clinics/clinics.routes.js';
+import roomRoutes from './modules/rooms/rooms.routes.js';
+import paymentRoutes from './modules/payments/payment.route.js';
+import recordRoutes from './modules/medical-records/record.route.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authenticateToken } from './middlewares/auth.middleware.js';
@@ -41,7 +44,9 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/specialty', specialtyRoutes);
 app.use('/api/clinics', clinicRoutes);
-
+app.use('/api/rooms', roomRoutes);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/record', recordRoutes);
 app.get('/', (req, res) => {
   res.send('HealthCare API is running');
 });

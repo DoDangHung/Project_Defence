@@ -1,27 +1,5 @@
 import prisma from '../../config/db.js';
 
-// export const getAllDoctor = async (departmentId) => {
-//   const where = departmentId ? { departmentId: Number(departmentId) } : {};
-
-//   const doctors = await prisma.doctor.findMany({
-//     where,
-//     include: {
-//       department: true,
-//       user: {
-//         include: {
-//           role: true,
-//         },
-//       },
-//     },
-//   });
-
-//   // 🔴 LOG để debug
-//   console.log('Service - First doctor:', JSON.stringify(doctors[0], null, 2));
-//   console.log('Service - First doctor user:', doctors[0]?.user);
-
-//   return doctors;
-// };
-
 export const getDoctorById = async (id) => {
   return prisma.doctor.findUnique({
     where: { id: Number(id) },
@@ -29,6 +7,7 @@ export const getDoctorById = async (id) => {
       department: true,
       schedules: true,
       appointments: true,
+      clinics: true,
       user: {
         // ✅ THÊM phần này
         include: {
@@ -50,7 +29,8 @@ export const getDoctorsByClinic = async (clinicId) => {
     },
     include: {
       user: true,
-      specialties: true, // nếu bạn dùng mảng specialties
+      specialties: true,
+      clinics: true,
     },
   });
 };
@@ -60,6 +40,113 @@ export const getDoctorsByDepartment = async (departmentId) => {
     where: { departmentId: Number(departmentId) },
     include: { department: true },
   });
+};
+
+// Lấy danh sách bệnh nhân của bác sĩ (đang + đã khám)
+
+export const getDoctorPatientsWithStats = async (doctorId) => {
+  // 1. Lấy toàn bộ appointment của bác sĩ
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      doctorId: Number(doctorId),
+      status: {
+        not: 'cancelled',
+      },
+    },
+    include: {
+      patient: {
+        select: {
+          id: true,
+          age: true,
+          gender: true,
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              phone: true,
+              email: true,
+            },
+          },
+        },
+      },
+    },
+    orderBy: {
+      startTime: 'desc',
+    },
+  });
+
+  const patientMap = new Map();
+
+  appointments.forEach((apt) => {
+    const pid = apt.patient.id;
+
+    if (!patientMap.has(pid)) {
+      patientMap.set(pid, {
+        patientId: pid,
+        patient: apt.patient,
+        totalVisits: 0,
+        completedVisits: 0,
+        upcomingVisits: 0,
+        lastVisit: null,
+      });
+    }
+
+    const record = patientMap.get(pid);
+
+    record.totalVisits += 1;
+
+    if (apt.status === 'completed') {
+      record.completedVisits += 1;
+    }
+
+    if (new Date(apt.startTime) > new Date()) {
+      record.upcomingVisits += 1;
+    }
+
+    if (
+      !record.lastVisit ||
+      new Date(apt.startTime) > new Date(record.lastVisit)
+    ) {
+      record.lastVisit = apt.startTime;
+    }
+  });
+
+  // ===== STATS =====
+  const totalPatients = patientMap.size;
+
+  let newPatients = 0;
+  let oldPatients = 0;
+
+  patientMap.forEach((p) => {
+    if (p.totalVisits === 1) newPatients++;
+    if (p.totalVisits > 1) oldPatients++;
+  });
+
+  // ===== LIST =====
+  const patients = Array.from(patientMap.values()).map((p) => ({
+    patientId: p.patientId,
+    firstName: p.patient.user.firstName,
+    lastName: p.patient.user.lastName,
+    phone: p.patient.user.phone,
+    email: p.patient.user.email,
+    age: p.patient.age,
+    gender: p.patient.gender,
+    totalVisits: p.totalVisits,
+    completedVisits: p.completedVisits,
+    upcomingVisits: p.upcomingVisits,
+    lastVisit: p.lastVisit,
+    status: p.totalVisits > 1 ? 'old' : 'new',
+  }));
+
+  return {
+    stats: {
+      totalPatients,
+      newPatients,
+      oldPatients,
+    },
+    patients,
+  };
 };
 
 export const createDoctor = async (data) => {
@@ -173,6 +260,7 @@ export const getFilteredDoctors = async (params) => {
       where,
       include: {
         department: true,
+        clinics: true,
         user: {
           // ✅ THÊM DÒNG NÀY
           include: {

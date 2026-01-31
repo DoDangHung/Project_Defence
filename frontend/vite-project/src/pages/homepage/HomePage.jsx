@@ -19,16 +19,16 @@ const HomePage = () => {
       {/* <HomeHeader /> */}
       {/* Hero Section */}
       <HeroSections />
+      {/* Partner */}
+      <CollabClinic />
       {/* Stats Section */}
       <Stats />
+      {/* HotDeals */}
+      <HotDeals />
       {/* Services Section - Slider */}
       <ServiceSections />
       {/* Specialty Section - Slider */}
       <SpecialtyServices />
-      {/* Partner */}
-      <CollabClinic />
-      {/* HotDeals */}
-      <HotDeals />
       {/* FeedBack */}
       <FeedBack />
       {/* Doctors Section - Slider */}

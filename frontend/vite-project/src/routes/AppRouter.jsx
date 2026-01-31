@@ -41,7 +41,12 @@ import DoctorPrescription from '../components/dashboard/Doctor/DoctorPrescriptio
 import Auth from '../components/dashboard/Auth/Auth';
 import RequireAuth from '../components/layouts/RequireAuth';
 import PublicRoute from '../components/dashboard/Auth/PublicRoutes';
-
+import FormData from '../pages/homepage/sections/BookingSchedules/Steps/FormData';
+import BookingSuccess from '../pages/homepage/sections/BookingSchedules/Steps/BookingSuccess';
+import StepConfirmPayment from '../pages/homepage/sections/BookingSchedules/Steps/StepConfirmPayment';
+import AppointmentSuccess from '../pages/homepage/sections/BookingSchedules/Steps/AppointmentSuccess';
+import PatientMedicalHistory from '../components/dashboard/Doctor/PatientProfile/PatientMedicalHistory';
+import FormAuth from '../pages/homepage/sections/BookingSchedules/Steps/FormAuth';
 export default function AppRouter() {
   return (
     <Routes>
@@ -61,6 +66,16 @@ export default function AppRouter() {
           <Route
             path="/booking/:specialtySlug/clinics/:clinicId/doctors"
             element={<StepSelectDoctor />}
+          />
+          <Route path="/booking/formAuth" element={<FormAuth />} />
+          <Route
+            path="/booking/formData/payments"
+            element={<StepConfirmPayment />}
+          />
+
+          <Route
+            path="/booking/appointment/success"
+            element={<AppointmentSuccess />}
           />
         </Route>
       </Route>
@@ -95,6 +110,7 @@ export default function AppRouter() {
         <Route path="/doctor" element={<DoctorLayout />}>
           <Route path="overview" element={<DoctorDashboard />} />
           <Route path="profile" element={<Profile />} />
+          <Route path="patient-history" element={<PatientMedicalHistory />} />
           <Route path="appointment" element={<DoctorAppointments />} />
           <Route path="shedules" element={<DoctorSchedules />} />
           <Route path="patients" element={<PatientProfile />} />

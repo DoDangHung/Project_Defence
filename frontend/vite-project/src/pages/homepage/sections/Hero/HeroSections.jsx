@@ -5,68 +5,65 @@ function HeroSections() {
   const navigate = useNavigate();
 
   return (
-    <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-      <div className="grid lg:grid-cols-2 gap-12 items-center">
-        <div>
-          <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 mb-6">
-            Đặt Lịch Khám{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
-              Dễ Dàng
-            </span>
-          </h1>
-          <p className="text-lg text-gray-600 mb-8">
-            Kết nối với các bác sĩ chuyên khoa hàng đầu. Đặt lịch nhanh chóng,
-            tiện lợi và an toàn.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <button
-              onClick={() => navigate('/booking')}
-              className="cursor-pointer bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-4 rounded-lg font-semibold hover:shadow-xl transition flex items-center justify-center"
-            >
-              Đặt Lịch Ngay <ChevronRight className="ml-2" />
-            </button>
-            <button className="cursor-pointer border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transition">
-              Tìm Hiểu Thêm
-            </button>
-            <button className="cursor-pointer border-2 border-blue-600 text-blue-600 px-8 py-4 rounded-lg font-semibold hover:bg-blue-50 transition">
-              Dat Lich AI
-            </button>
-          </div>
-        </div>
+    <>
+      <section
+        className="relative bg-cover bg-center"
+        style={{
+          backgroundImage:
+            'url(https://images.unsplash.com/photo-1586773860418-d37222d8fce3)',
+        }}
+      >
+        <div className="absolute inset-0 bg-sky-900/40"></div>
 
-        <div className="relative">
-          <div className="bg-gradient-to-br from-blue-600 to-cyan-600 rounded-3xl p-8 shadow-2xl">
-            <div className="bg-white rounded-2xl p-6">
-              <h3 className="text-xl font-bold mb-4">Đặt Lịch Nhanh</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Chọn Dịch Vụ
-                  </label>
-                  <select className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:border-transparent">
-                    <option>Khám Tổng Quát</option>
-                    <option>Nha Khoa</option>
-                    <option>Tim Mạch</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-2">
-                    Chọn Ngày
-                  </label>
-                  <input
-                    type="date"
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-600 focus:border-transparent"
-                  />
-                </div>
-                <button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition">
-                  Tìm Kiếm
-                </button>
-              </div>
-            </div>
+        <div className="relative max-w-7xl mx-auto px-4 py-20 text-center text-white">
+          <h1 className="text-2xl md:text-4xl font-bold">
+            Kết nối Người Dân với Cơ sở & Dịch vụ Y tế hàng đầu
+          </h1>
+
+          {/* Search */}
+          <div className="mt-8 max-w-3xl mx-auto bg-white rounded-full flex overflow-hidden shadow-lg">
+            <input
+              type="text"
+              placeholder="Tìm bác sĩ, bệnh viện, chuyên khoa..."
+              className="flex-1 px-5 py-3 text-gray-800 focus:outline-none"
+            />
+            <button className="bg-sky-600 px-6 text-white font-semibold">
+              Tìm kiếm
+            </button>
           </div>
+
+          <p className="mt-4 text-green-300 text-sm">
+            ✔ Được hoàn tiền khi huỷ khám – Có cơ hội nhận ưu đãi
+          </p>
         </div>
-      </div>
-    </section>
+      </section>
+
+      {/* ================= SERVICES ================= */}
+      <section className="max-w-7xl mx-auto px-4 -mt-10 relative z-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          {[
+            { label: 'Đặt khám tại cơ sở', path: '/co-so-y-te' },
+            { label: 'Đặt khám chuyên khoa', path: '/booking' },
+            { label: 'Gọi video với bác sĩ', path: '/tu-van-video' },
+            { label: 'Đặt lịch xét nghiệm', path: '/xet-nghiem' },
+            { label: 'Mua thuốc tại An Khang', path: '/nha-thuoc' },
+            { label: 'Giúp việc cá nhân', path: '/giup-viec' },
+            { label: 'Khám doanh nghiệp', path: '/kham-doanh-nghiep' },
+          ].map((item, i) => (
+            <div
+              key={i}
+              onClick={() => navigate(item.path)}
+              className="bg-white rounded-xl shadow hover:shadow-lg transition p-4 flex flex-col items-center text-center cursor-pointer hover:ring-2 hover:ring-sky-300"
+            >
+              <div className="w-12 h-12 mb-2 rounded-full bg-sky-100 flex items-center justify-center text-xl">
+                🏥
+              </div>
+              <p className="text-sm font-medium">{item.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 

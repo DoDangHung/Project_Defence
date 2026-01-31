@@ -8,23 +8,50 @@ function Stats() {
     { icon: <Star className="w-8 h-8" />, value: '4.9', label: 'Đánh Giá' },
   ];
   return (
-    <section className="bg-white py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mb-4">
-                {stat.icon}
+    <>
+      {/* ================= FEATURED HOSPITALS ================= */}
+      <section className="max-w-7xl mx-auto px-4 py-14">
+        <h2 className="text-center text-xl font-semibold mb-10">
+          CƠ SỞ Y TẾ NỔI BẬT TRONG THÁNG
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            'Bệnh viện Da Liễu TP.HCM',
+            'Bệnh viện Quận Bình Thạnh',
+            'Bệnh viện Trưng Vương',
+            'BV Chấn Thương Chỉnh Hình',
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="bg-white rounded-xl shadow hover:shadow-lg transition p-4"
+            >
+              <div className="w-20 h-20 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                🏥
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">
-                {stat.value}
+              <h3 className="font-semibold text-center text-sm">{item}</h3>
+              <p className="text-xs text-gray-500 text-center mt-1">
+                Quận TP.HCM
+              </p>
+
+              <div className="flex justify-center text-orange-400 text-sm my-2">
+                ★★★★☆
               </div>
-              <div className="text-gray-600">{stat.label}</div>
+
+              <button className="w-full bg-sky-600 text-white py-2 rounded mt-2">
+                Đặt khám ngay
+              </button>
             </div>
           ))}
         </div>
-      </div>
-    </section>
+
+        <div className="text-center mt-6">
+          <a href="#" className="text-sky-600 text-sm">
+            Xem tất cả →
+          </a>
+        </div>
+      </section>
+    </>
   );
 }
 

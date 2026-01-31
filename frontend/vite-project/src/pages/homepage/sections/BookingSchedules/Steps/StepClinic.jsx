@@ -28,14 +28,11 @@ const StepClinic = () => {
   const { selectedSpecialty } = useOutletContext();
   const { slug } = useParams();
   const categories = [
-    { id: 'internal', name: 'Nội khoa', count: 12 },
-    { id: 'surgery', name: 'Ngoại khoa', count: 8 },
-    { id: 'pediatrics', name: 'Nhi khoa', count: 6 },
-    { id: 'gynecology', name: 'Sản phụ khoa', count: 5 },
-    { id: 'ent', name: 'Tai mũi họng', count: 7 },
-    { id: 'dermatology', name: 'Da liễu', count: 4 },
-    { id: 'ophthalmology', name: 'Mắt', count: 3 },
-    { id: 'dental', name: 'Răng hàm mặt', count: 10 },
+    { id: 'All ', name: 'Tất cả ', count: 12 },
+    { id: 'Medical facility', name: 'Cơ sở y tế ', count: 8 },
+    { id: 'Doctor', name: 'Bac Si', count: 6 },
+    { id: 'Specialty', name: 'Chuyen Khoa', count: 5 },
+    { id: 'Examination package', name: 'Gói khám ', count: 7 },
   ];
   const availabilityOptions = [{ id: 'Doctor', label: 'Doctor' }];
   const [filters, setFilters] = useState({
@@ -64,6 +61,27 @@ const StepClinic = () => {
       });
   }, [slug]);
   console.log('Selected clinic:', selectedClinic);
+
+  const handleSelectClinic = () => {
+    if (!selectedClinic) {
+      alert('Vui lòng chọn phòng khám');
+      return;
+    }
+
+    const booking = JSON.parse(localStorage.getItem('booking')) || {};
+    localStorage.setItem(
+      'booking',
+      JSON.stringify({
+        ...booking,
+        clinicId: selectedClinic.id,
+        clinicName: selectedClinic.name,
+        clinicAddress: selectedClinic.address,
+      }),
+    );
+
+    console.log('✅ Saved clinic:', selectedClinic); // Debug
+    navigate(`/booking/${slug}/clinics/${selectedClinic.id}/doctors`);
+  };
   const [expandedSections, setExpandedSections] = useState({
     category: true,
     rating: true,
@@ -181,51 +199,9 @@ const StepClinic = () => {
       </FilterSection>
 
       {/* Lịch khám */}
-      <FilterSection title="Doctor" section="Doctor">
-        <div className="space-y-2">
-          {availabilityOptions.map((option) => (
-            <label
-              key={option.id}
-              className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"
-            >
-              <input
-                type="checkbox"
-                checked={filters.availability.includes(option.id)}
-                onChange={() => handleAvailabilityChange(option.id)}
-                className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-gray-700">{option.label}</span>
-            </label>
-          ))}
-        </div>
-      </FilterSection>
 
       {/* Đánh giá */}
-      <FilterSection title="Đánh giá" section="rating">
-        <div className="space-y-2">
-          {[5, 4, 3, 2].map((rating) => (
-            <label
-              key={rating}
-              className="flex items-center cursor-pointer hover:bg-gray-50 p-1 rounded"
-            >
-              <input
-                type="radio"
-                name="rating"
-                checked={filters.rating === rating}
-                onChange={() => setFilters((prev) => ({ ...prev, rating }))}
-                className="w-4 h-4 text-blue-600 focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="ml-2 text-gray-700 flex items-center">
-                {rating} sao trở lên
-                <span className="ml-1 text-yellow-400">
-                  {'★'.repeat(rating)}
-                  {'☆'.repeat(5 - rating)}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </FilterSection>
+
       {/* Apply Button */}
       <button
         onClick={() => setSidebarOpen(false)}
@@ -393,11 +369,7 @@ const StepClinic = () => {
               </button>
               <button
                 disabled={!selectedClinic}
-                onClick={() =>
-                  navigate(
-                    `/booking/${slug}/clinics/${selectedClinic.id}/doctors`
-                  )
-                }
+                onClick={handleSelectClinic}
                 className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all"
               >
                 Tiếp tục

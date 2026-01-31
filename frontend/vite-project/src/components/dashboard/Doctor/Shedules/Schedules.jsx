@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Calendar,
   Clock,
@@ -6,17 +6,21 @@ import {
   AlertCircle,
   CheckCircle,
   Trash2,
+  House,
 } from 'lucide-react';
+import axios from 'axios';
+import { useParams } from 'react-router';
 
 export default function CreateSchedule() {
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
+    new Date().toISOString().split('T')[0],
   );
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
   const [createdSchedules, setCreatedSchedules] = useState([]);
-
+  const [rooms, setRooms] = useState([]);
+  const [selectedRoomId, setSelectedRoomId] = useState('');
   // Load schedules từ localStorage khi component mount
   React.useEffect(() => {
     loadSchedulesFromStorage();
@@ -27,6 +31,25 @@ export default function CreateSchedule() {
       saveSchedulesToStorage(createdSchedules);
     }
   }, [createdSchedules]);
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      const token = sessionStorage.getItem('token');
+
+      const res = await fetch('http://localhost:8080/api/rooms', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      console.log('data from room', res.data);
+      const data = await res.json();
+      if (data.success) {
+        setRooms(data.data);
+      }
+    };
+
+    fetchRooms();
+  }, []);
 
   // Load và filter schedules từ localStorage
   const loadSchedulesFromStorage = () => {
@@ -141,7 +164,7 @@ export default function CreateSchedule() {
 
       const dateISO = new Date(selectedDate).toISOString();
       const startTimeISO = new Date(
-        `${selectedDate}T${startTime}`
+        `${selectedDate}T${startTime}`,
       ).toISOString();
       const endTimeISO = new Date(`${selectedDate}T${endTime}`).toISOString();
 
@@ -155,10 +178,11 @@ export default function CreateSchedule() {
           },
           body: JSON.stringify({
             date: dateISO,
+            roomId: Number(selectedRoomId),
             startTime: startTimeISO,
             endTime: endTimeISO,
           }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -245,6 +269,27 @@ export default function CreateSchedule() {
                     min={new Date().toISOString().split('T')[0]}
                     className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg font-medium"
                   />
+                </div>
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Chọn Room làm việc
+                </label>
+                <div className="relative">
+                  <House className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+
+                  <select
+                    value={selectedRoomId}
+                    onChange={(e) => setSelectedRoomId(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg font-medium bg-white appearance-none"
+                  >
+                    <option value="">-- Chọn room --</option>
+                    {rooms.map((room) => (
+                      <option key={room.id} value={room.id}>
+                        Room {room.roomNumber}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -418,7 +463,7 @@ export default function CreateSchedule() {
                         <div className="flex-1">
                           <p className="text-xs text-gray-600 mb-1">
                             {new Date(schedule.date).toLocaleDateString(
-                              'vi-VN'
+                              'vi-VN',
                             )}
                           </p>
                           <p className="font-semibold text-gray-800 text-sm">

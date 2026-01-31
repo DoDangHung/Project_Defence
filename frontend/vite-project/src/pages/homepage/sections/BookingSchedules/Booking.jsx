@@ -69,13 +69,8 @@ export default function Booking() {
 
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8">
-          {/* 
-            Outlet sẽ render component tương ứng với route:
-            - /booking → StepSpecialty
-            - /booking/clinics/:slug → StepClinic
-            - /booking/clinics/:specialtySlug/doctors/:clinicSlug → StepSelectDoctor
-            - etc...
-          */}
+          {/*
+           */}
           <Outlet
             context={{
               bookingData,

@@ -178,6 +178,36 @@ export const AppointmentController = {
     }
   },
 
+  // GET /api/appointments/my-appointments (cho patient đang login)
+  getMyAppointments: async (req, res) => {
+    try {
+      const patientId = req.user.patientId;
+      if (!patientId) {
+        return res.status(403).json({
+          success: false,
+          message: 'Chỉ bệnh nhân mới có thể xem lịch khám của mình',
+        });
+      }
+      const filters = req.query;
+      const result = await appointmentService.getPatientAppointments(
+        patientId,
+        filters,
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'My appointments retrieved successfully',
+        ...result,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error retrieving my appointments',
+        error: error.message,
+      });
+    }
+  },
+
   // GET /api/appointments/clinic/:clinicId
   getClinicAppointments: async (req, res) => {
     try {
@@ -217,6 +247,25 @@ export const AppointmentController = {
       res.status(500).json({
         success: false,
         message: 'Error retrieving appointment statistics',
+        error: error.message,
+      });
+    }
+  },
+
+  // POST /api/appointments/backfill-room - Backfill roomId cho appointments cũ
+  backfillRoomId: async (req, res) => {
+    try {
+      const result = await appointmentService.backfillRoomId();
+
+      res.status(200).json({
+        success: true,
+        message: 'Room ID backfill completed',
+        data: result,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: 'Error during backfill',
         error: error.message,
       });
     }

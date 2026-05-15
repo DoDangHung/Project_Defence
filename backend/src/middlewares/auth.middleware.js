@@ -51,10 +51,11 @@ export const authorizeRole = (...allowedRoles) => {
         });
       }
 
-      // Check role
-      const userRole = req.user.roleName;
+      // Check role (case-insensitive)
+      const userRole = req.user.roleName?.toLowerCase();
+      const normalizedAllowedRoles = allowedRoles.map(r => r.toLowerCase());
 
-      if (!allowedRoles.includes(userRole)) {
+      if (!normalizedAllowedRoles.includes(userRole)) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. Insufficient permissions.',

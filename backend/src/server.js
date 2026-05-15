@@ -1,9 +1,20 @@
 import app from './app.js';
-import dotnev from 'dotenv';
+import { createServer } from 'http';
+import { initSocket } from './config/socket.js';
 
-dotnev.config();
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost: ${PORT}`);
+// Tạo HTTP server
+const httpServer = createServer(app);
+
+// Khởi tạo Socket.io
+const io = initSocket(httpServer);
+
+// Lưu io vào app để có thể access từ controllers
+app.set('io', io);
+
+// Start server
+httpServer.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Socket.io initialized`);
 });

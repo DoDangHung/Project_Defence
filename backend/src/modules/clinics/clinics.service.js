@@ -26,6 +26,8 @@ export const clinicService = {
       district,
       isActive,
       slug,
+      categoryId,
+      categorySlug,
     } = filters;
 
     const where = {};
@@ -41,6 +43,15 @@ export const clinicService = {
 
     //Filter theo slug
     if (slug) where.slug = { contains: slug, mode: 'insensitive' };
+
+    // Filter theo category
+    if (categoryId) {
+      where.categoryId = parseInt(categoryId);
+    }
+    if (categorySlug) {
+      where.category = { slug: categorySlug };
+    }
+
     // Search theo name, address, email, phone
     if (search) {
       where.OR = [
@@ -57,6 +68,7 @@ export const clinicService = {
       prisma.clinic.findMany({
         where,
         include: {
+          category: true,
           specialties: {
             include: {
               specialty: true,
@@ -338,6 +350,7 @@ export const clinicService = {
       openingTime,
       closingTime,
       isActive,
+      logo: logoUrl,
     } = data;
 
     let slug = createSlug(name);
@@ -353,8 +366,8 @@ export const clinicService = {
       slug = `${slug}-${count + 1}`;
     }
 
-    // Xử lý logo từ Cloudinary
-    const logo = logoFile ? logoFile.path : null;
+    // Xử lý logo: ưu tiên file upload, không thì lấy từ body (URL string)
+    const logo = logoFile ? logoFile.path : (logoUrl || null);
 
     // Xử lý multiple images từ Cloudinary
     const images =
@@ -429,17 +442,28 @@ export const clinicService = {
       throw new Error('Some doctors not found');
     }
 
-    // 3. Replace old relations with new ones
-    await prisma.clinic.update({
+    // 3. Get current doctors assigned to this clinic
+    const currentDoctors = await prisma.clinic.findUnique({
       where: { id: clinicId },
-      data: {
-        doctors: {
-          set: doctorIds.map((id) => ({ id })),
-        },
-      },
+      select: { doctors: { select: { id: true } } },
     });
+    const currentDoctorIds = new Set(currentDoctors.doctors.map((d) => d.id));
 
-    return { message: 'Doctors assigned successfully' };
+    // 4. Only connect doctors that aren't already assigned
+    const newDoctorIds = doctorIds.filter((id) => !currentDoctorIds.has(id));
+
+    if (newDoctorIds.length > 0) {
+      await prisma.clinic.update({
+        where: { id: clinicId },
+        data: {
+          doctors: {
+            connect: newDoctorIds.map((id) => ({ id })),
+          },
+        },
+      });
+    }
+
+    return { message: 'Doctors assigned successfully', added: newDoctorIds.length };
   },
 
   // Cập nhật clinic
@@ -556,66 +580,63 @@ export const clinicService = {
     return updatedClinic;
   },
 
-  // Lấy danh sách bác sĩ của clinic
+  // Lấy danh sách bác sĩ của clinic (query từ DoctorClinicAssignment)
   getClinicDoctors: async (clinicId, filters = {}) => {
-    // Debug: Kiểm tra clinicId
-    console.log('clinicId received:', clinicId, typeof clinicId);
-
-    // Validate clinicId
     if (!clinicId || isNaN(parseInt(clinicId))) {
       throw new Error('Invalid clinic ID');
     }
 
-    const { page = 1, limit = 10, specialization } = filters;
-
     const parsedClinicId = parseInt(clinicId);
-    console.log('parsedClinicId:', parsedClinicId);
+    const { page = 1, limit = 100, specialization } = filters;
 
-    const where = {
-      clinics: {
-        some: {
-          id: parsedClinicId,
-        },
-      },
-    };
+    const assignmentWhere = { clinicId: parsedClinicId, status: 'active' };
 
-    if (specialization) {
-      where.specialization = { contains: specialization, mode: 'insensitive' };
-    }
-
-    console.log('where condition:', JSON.stringify(where, null, 2));
-
-    const skip = (page - 1) * limit;
-
-    const [doctors, total] = await Promise.all([
-      prisma.doctor.findMany({
-        where,
+    const [assignments, total] = await Promise.all([
+      prisma.doctorClinicAssignment.findMany({
+        where: assignmentWhere,
         include: {
-          user: {
+          doctor: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  phone: true,
+                  avatar: true,
+                },
+              },
+            },
+          },
+          clinic: {
             select: {
               id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-              phone: true,
-              avatar: true,
+              name: true,
+              address: true,
+              latitude: true,
             },
           },
-          clinics: true,
-          _count: {
-            select: {
-              appointments: true,
-            },
-          },
+          room: true,
         },
-        skip: parseInt(skip),
+        skip: (parseInt(page) - 1) * parseInt(limit),
         take: parseInt(limit),
-        orderBy: {
-          createdAt: 'desc',
-        },
+        orderBy: { createdAt: 'desc' },
       }),
-      prisma.doctor.count({ where }),
+      prisma.doctorClinicAssignment.count({ where: assignmentWhere }),
     ]);
+
+    // Filter by specialization in JS (since doctor.specialization is on Doctor model)
+    let doctors = assignments.map((a) => ({
+      ...a.doctor,
+      room: a.room,
+    }));
+
+    if (specialization) {
+      doctors = doctors.filter((d) =>
+        d.specialization?.toLowerCase().includes(specialization.toLowerCase())
+      );
+    }
 
     return {
       data: doctors,
@@ -623,7 +644,7 @@ export const clinicService = {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(total / limit),
+        totalPages: Math.ceil(total / parseInt(limit)),
       },
     };
   },

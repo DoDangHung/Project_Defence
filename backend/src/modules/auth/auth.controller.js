@@ -4,6 +4,10 @@ const authController = {
   login: async (req, res) => {
     try {
       const { email, password } = req.body;
+      const ip =
+        req.ip ||
+        req.headers['x-forwarded-for'] ||
+        req.connection.remoteAddress;
 
       // Validation
       if (!email || !password) {
@@ -13,17 +17,19 @@ const authController = {
         });
       }
 
-      // Login
-      const result = await authService.login(email, password);
+      const result = await authService.login(email, password, ip);
 
-      res.status(200).json({
+      return res.status(200).json({
         success: true,
         message: 'Login successful',
         data: result,
       });
     } catch (error) {
-      console.error('Login error:', error);
-      res.status(401).json({
+      console.error('Login error: Your Account will be blocked 15 mins', error);
+
+      const statusCode = error.status || 401;
+
+      return res.status(statusCode).json({
         success: false,
         message: error.message || 'Login failed',
       });

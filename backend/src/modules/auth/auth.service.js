@@ -1,82 +1,83 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../../config/db.js';
 import userService from '../users/user.service.js';
 
+const loginAttempts = new Map();
+
+const MAX_ATTEMPTS = 5;
+const LOCK_TIME = 15 * 60 * 1000; // 15 phút
 const generateAccessToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '15m' });
 };
 
 const authService = {
   // Login user
-  login: async (email, password) => {
-    // Tìm user theo email, include role và các relations
+  login: async (email, password, ip) => {
+    const key = `${email}_${ip}`;
+    const now = Date.now();
+
+    const record = loginAttempts.get(key);
+
+    // 🚫 đang bị khóa
+    if (record?.lockUntil && record.lockUntil > now) {
+      throw {
+        status: 429,
+        message: 'Too many login attempts. Try again later.',
+      };
+    }
+
     const user = await prisma.user.findUnique({
       where: { email },
-      include: {
-        role: true,
-        admin: true,
-        doctor: true,
-        patient: true,
-        nurse: true,
-      },
+      include: { role: true, admin: true, doctor: true, patient: true },
     });
 
-    // Check user tồn tại
-    if (!user) {
-      throw new Error('Invalid email or password');
-    }
+    const isPasswordValid =
+      user && (await bcrypt.compare(password, user.password));
 
-    // Check account status
-    if (user.status !== 'active') {
-      throw new Error('Account is inactive. Please contact administrator.');
-    }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new Error('Invalid email or password');
+      const failed = (record?.failedAttempts || 0) + 1;
+
+      loginAttempts.set(key, {
+        failedAttempts: failed,
+        lockUntil: failed >= MAX_ATTEMPTS ? now + LOCK_TIME : null,
+      });
+
+      throw failed >= MAX_ATTEMPTS
+        ? { status: 429, message: 'Too many login attempts' }
+        : { status: 401, message: 'Invalid email or password' };
     }
 
-    // Tạo JWT token
+    // ✅ login đúng → reset
+    loginAttempts.delete(key);
+
+    // JWT giữ nguyên code của bạn
     const token = jwt.sign(
       {
         userId: user.id,
         email: user.email,
         roleId: user.roleId,
-        doctorId: user.doctor ? user.doctor.id : null,
-        // doctorId: user.doctor?.id, // ← Thêm doctorId
-        adminId: user.admin?.id, // ← Thêm adminId
-        patientId: user.patient?.id, // ← Thêm patientId
-        nurseId: user.nurse?.[0]?.id, // ← Thêm nurseId
+        doctorId: user.doctor?.id || null,
+        adminId: user.admin?.id || null,
+        patientId: user.patient?.id || null,
         roleName: user.role.name,
       },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '24h' },
     );
 
-    // Chuẩn bị response data
     const { password: _, ...userWithoutPassword } = user;
 
-    // Thêm specific ID dựa trên role
     let specificData = {};
-    if (user.doctor) {
+    if (user.patient) {
+      specificData.patientId = user.patient.id;
+    } else if (user.doctor) {
       specificData.doctorId = user.doctor.id;
     } else if (user.admin) {
       specificData.adminId = user.admin.id;
-    } else if (user.patient) {
-      specificData.patientId = user.patient.id;
-    } else if (user.nurse && user.nurse.length > 0) {
-      specificData.nurseId = user.nurse[0].id;
     }
 
-    return {
-      token,
-      user: {
-        ...userWithoutPassword,
-        ...specificData,
-      },
-    };
+    return { token, user: { ...userWithoutPassword, ...specificData } };
   },
 
   // Get current user by ID
@@ -88,7 +89,6 @@ const authService = {
         admin: true,
         doctor: true,
         patient: true,
-        nurse: true,
       },
     });
 
@@ -106,8 +106,6 @@ const authService = {
       specificData.adminId = user.admin.id;
     } else if (user.patient) {
       specificData.patientId = user.patient.id;
-    } else if (user.nurse && user.nurse.length > 0) {
-      specificData.nurseId = user.nurse[0].id;
     }
 
     return {
@@ -145,13 +143,33 @@ const authService = {
 
   //POST register user
   registerUser: async (data) => {
-    const user = await userService.createPatient(data);
-    const payload = { id: user.id, role: user.roleId };
+    try {
+      console.log('REGISTER DATA:', data);
 
-    return {
-      user,
-      accessToken: generateAccessToken(payload),
-    };
+      const { roleId, roleid } = data;
+      const finalRoleId = roleId || roleid || 3; // Default Patient
+
+      let user;
+      if (finalRoleId === 1) {
+        user = await userService.createAdmin(data);
+      } else if (finalRoleId === 2) {
+        user = await userService.createDoctor(data);
+      } else {
+        user = await userService.createPatient(data);
+      }
+
+      console.log('USER CREATED:', user);
+
+      const payload = { id: user.id, role: user.roleId };
+
+      return {
+        user,
+        accessToken: generateAccessToken(payload),
+      };
+    } catch (err) {
+      console.error('REGISTER ERROR:', err.message);
+      throw err;
+    }
   },
 };
 

@@ -1,22 +1,16 @@
 import { PaymentService } from './payment.service.js';
+import prisma from '../../config/db.js';
+
 export const PaymentController = {
-  // POST /api/payments - Tạo payment mới
+  // POST /api/payment - Tạo payment mới
   createPayment: async (req, res) => {
     try {
-      const {
-        appointmentId,
-        patientId,
-        consultationFee,
-        depositPercentage,
-        paymentMethod,
-      } = req.body;
+      const { appointmentId, patientId, consultationFee, paymentMethod } = req.body;
 
-      // Validation
       if (!appointmentId || !patientId || !consultationFee) {
         return res.status(400).json({
           success: false,
-          message:
-            'Missing required fields: appointmentId, patientId, consultationFee',
+          message: 'Missing required fields: appointmentId, patientId, consultationFee',
         });
       }
 
@@ -27,13 +21,11 @@ export const PaymentController = {
         });
       }
 
-      if (
-        depositPercentage &&
-        (depositPercentage < 0 || depositPercentage > 100)
-      ) {
+      const validMethods = ['cash', 'visa_mastercard', 'apple_google_pay', 'bank_transfer'];
+      if (paymentMethod && !validMethods.includes(paymentMethod)) {
         return res.status(400).json({
           success: false,
-          message: 'Deposit percentage must be between 0 and 100',
+          message: 'Invalid payment method',
         });
       }
 
@@ -41,8 +33,7 @@ export const PaymentController = {
         appointmentId,
         patientId,
         consultationFee,
-        depositPercentage,
-        paymentMethod,
+        paymentMethod: paymentMethod || 'cash',
       });
 
       return res.status(201).json({
@@ -59,38 +50,20 @@ export const PaymentController = {
     }
   },
 
-  // POST /api/payments/:id/deposit - Xử lý thanh toán đặt cọc
+  // POST /api/payment/:id/deposit - Xử lý thanh toán đặt cọc (online payments)
   processDeposit: async (req, res) => {
     try {
       const paymentId = parseInt(req.params.id);
-      const { paymentMethod, transactionId, provider } = req.body;
-
-      if (!paymentMethod) {
-        return res.status(400).json({
-          success: false,
-          message: 'Payment method is required',
-        });
-      }
-
-      const validMethods = ['cash', 'card', 'bank_transfer', 'insurance'];
-      if (!validMethods.includes(paymentMethod)) {
-        return res.status(400).json({
-          success: false,
-          message:
-            'Invalid payment method. Must be: cash, card, bank_transfer, or insurance',
-        });
-      }
+      const { transactionId } = req.body;
 
       const payment = await PaymentService.processDeposit({
         paymentId,
-        paymentMethod,
         transactionId,
-        provider,
       });
 
       return res.status(200).json({
         success: true,
-        message: 'Deposit processed successfully',
+        message: 'Deposit payment successful',
         data: payment,
       });
     } catch (error) {
@@ -102,34 +75,16 @@ export const PaymentController = {
     }
   },
 
-  // POST /api/payments/:id/final - Xử lý thanh toán cuối cùng
+  // POST /api/payment/:id/final - Xử lý thanh toán cuối cùng
   processFinalPayment: async (req, res) => {
     try {
       const paymentId = parseInt(req.params.id);
-      const { paymentMethod, transactionId, provider, additionalCharges } =
-        req.body;
-
-      if (!paymentMethod) {
-        return res.status(400).json({
-          success: false,
-          message: 'Payment method is required',
-        });
-      }
-
-      const validMethods = ['cash', 'card', 'bank_transfer', 'insurance'];
-      if (!validMethods.includes(paymentMethod)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Invalid payment method',
-        });
-      }
+      const { transactionId, additionalCharges } = req.body;
 
       const payment = await PaymentService.processFinalPayment({
         paymentId,
-        paymentMethod,
         transactionId,
-        provider,
-        additionalCharges,
+        additionalCharges: additionalCharges || [],
       });
 
       return res.status(200).json({
@@ -146,7 +101,57 @@ export const PaymentController = {
     }
   },
 
-  // POST /api/payments/:id/charges - Thêm chi phí phát sinh
+  // POST /api/payment/:id/cash - Xử lý thanh toán tiền mặt tại quầy
+  processCashPayment: async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.id);
+      const { amountReceived } = req.body;
+
+      const payment = await PaymentService.processCashPayment({
+        paymentId,
+        amountReceived,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Cash payment processed successfully',
+        data: payment,
+      });
+    } catch (error) {
+      console.error('Process cash payment error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to process cash payment',
+      });
+    }
+  },
+
+  // POST /api/payment/:id/cancel - Hủy lịch với refund
+  cancelWithRefund: async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.id);
+      const { reason } = req.body;
+
+      const result = await PaymentService.cancelAppointmentWithRefund(
+        paymentId,
+        reason || 'Patient cancelled'
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: 'Appointment cancelled',
+        data: result,
+      });
+    } catch (error) {
+      console.error('Cancel with refund error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to cancel appointment',
+      });
+    }
+  },
+
+  // POST /api/payment/:id/charges - Thêm chi phí phát sinh
   addAdditionalCharge: async (req, res) => {
     try {
       const paymentId = parseInt(req.params.id);
@@ -185,8 +190,8 @@ export const PaymentController = {
     }
   },
 
-  // POST /api/payments/:id/refund - Hoàn tiền
-  refundPayment: async (req, res) => {
+  // POST /api/payment/:id/refund - Hoàn tiền thủ công (admin)
+  manualRefund: async (req, res) => {
     try {
       const paymentId = parseInt(req.params.id);
       const { refundAmount, refundReason } = req.body;
@@ -205,7 +210,7 @@ export const PaymentController = {
         });
       }
 
-      const payment = await paymentService.refundPayment({
+      const payment = await PaymentService.manualRefund({
         paymentId,
         refundAmount,
         refundReason,
@@ -225,11 +230,10 @@ export const PaymentController = {
     }
   },
 
-  // GET /api/payments/:id - Lấy thông tin payment
+  // GET /api/payment/:id - Lấy thông tin payment
   getPayment: async (req, res) => {
     try {
       const paymentId = parseInt(req.params.id);
-
       const payment = await PaymentService.getPaymentById(paymentId);
 
       return res.status(200).json({
@@ -245,14 +249,11 @@ export const PaymentController = {
     }
   },
 
-  // GET /api/payments/appointment/:appointmentId - Lấy payment theo appointment
+  // GET /api/payment/appointment/:appointmentId - Lấy payment theo appointment
   getPaymentByAppointment: async (req, res) => {
     try {
       const appointmentId = parseInt(req.params.appointmentId);
-
-      const payment = await PaymentService.getPaymentByAppointment(
-        appointmentId
-      );
+      const payment = await PaymentService.getPaymentByAppointment(appointmentId);
 
       if (!payment) {
         return res.status(404).json({
@@ -274,11 +275,50 @@ export const PaymentController = {
     }
   },
 
-  // GET /api/payments/patient/:patientId - Lấy danh sách payment của bệnh nhân
+  // GET /api/payment/my-payments - Lấy payments của user hiện tại (patient)
+  getMyPayments: async (req, res) => {
+    try {
+      // Ưu tiên patientId từ token, fallback sang userId
+      const patientId = req.user?.patientId;
+      const userId = req.user?.userId || req.user?.id;
+
+      let actualPatientId = patientId;
+
+      // Nếu không có patientId trong token, tìm qua userId
+      if (!actualPatientId && userId) {
+        const patient = await prisma.patient.findUnique({
+          where: { userId },
+        });
+        actualPatientId = patient?.id;
+      }
+
+      if (!actualPatientId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Patient profile not found',
+        });
+      }
+
+      const payments = await PaymentService.getMyPayments(actualPatientId);
+
+      return res.status(200).json({
+        success: true,
+        data: payments,
+        total: payments.length,
+      });
+    } catch (error) {
+      console.error('Get my payments error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to get payments',
+      });
+    }
+  },
+
+  // GET /api/payment/patient/:patientId - Lấy danh sách payment của bệnh nhân
   getPatientPayments: async (req, res) => {
     try {
       const patientId = parseInt(req.params.patientId);
-
       const payments = await PaymentService.getPatientPayments(patientId);
 
       return res.status(200).json({
@@ -295,14 +335,11 @@ export const PaymentController = {
     }
   },
 
-  // GET /api/payments/:id/transactions - Lấy lịch sử giao dịch
+  // GET /api/payment/:id/transactions - Lấy lịch sử giao dịch
   getTransactions: async (req, res) => {
     try {
       const paymentId = parseInt(req.params.id);
-
-      const transactions = await PaymentService.getPaymentTransactions(
-        paymentId
-      );
+      const transactions = await PaymentService.getPaymentTransactions(paymentId);
 
       return res.status(200).json({
         success: true,
@@ -318,11 +355,39 @@ export const PaymentController = {
     }
   },
 
-  // GET /api/payments/stats - Thống kê doanh thu
+  // GET /api/payment - Lấy danh sách tất cả payments (admin)
+  getAllPayments: async (req, res) => {
+    try {
+      const { page, limit, status, paymentMethod, search, startDate, endDate } = req.query;
+
+      const result = await PaymentService.getAllPayments({
+        page: parseInt(page) || 1,
+        limit: parseInt(limit) || 50,
+        status,
+        paymentMethod,
+        search,
+        startDate,
+        endDate,
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: result.data,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      console.error('Get all payments error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to get payments',
+      });
+    }
+  },
+
+  // GET /api/payment/stats - Thống kê doanh thu
   getStats: async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
-
       const start = startDate ? new Date(startDate) : undefined;
       const end = endDate ? new Date(endDate) : undefined;
 
@@ -337,6 +402,72 @@ export const PaymentController = {
       return res.status(400).json({
         success: false,
         message: error.message || 'Failed to get payment stats',
+      });
+    }
+  },
+
+  // GET /api/payment/policy - Lấy thông tin chính sách refund
+  getRefundPolicy: async (req, res) => {
+    try {
+      const policy = await PaymentService.getRefundPolicy();
+
+      return res.status(200).json({
+        success: true,
+        data: policy,
+      });
+    } catch (error) {
+      console.error('Get refund policy error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to get refund policy',
+      });
+    }
+  },
+
+  // POST /api/payment/:id/no-show - Đánh dấu không đến
+  markNoShow: async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.id);
+      const { reason } = req.body;
+
+      const result = await PaymentService.markAsNoShow(paymentId, reason);
+
+      return res.status(200).json({
+        success: true,
+        message: result.forfeitInfo.message,
+        data: result,
+      });
+    } catch (error) {
+      console.error('Mark no-show error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to mark as no-show',
+      });
+    }
+  },
+
+  // POST /api/payment/:id/confirm-payment - Xác nhận thanh toán (admin)
+  confirmPayment: async (req, res) => {
+    try {
+      const paymentId = parseInt(req.params.id);
+      const { additionalCharges, notes } = req.body;
+
+      const payment = await PaymentService.processFinalPayment({
+        paymentId,
+        additionalCharges: additionalCharges || [],
+        notes,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Xác nhận thanh toán thành công',
+        data: payment,
+      });
+    } catch (error) {
+      console.error('Confirm payment error:', error);
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Failed to confirm payment',
       });
     }
   },

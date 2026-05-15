@@ -1,5 +1,6 @@
 import prisma from '../../config/db.js';
 import { generateTimeSlots } from '../../utils/slotGenerator.js';
+import { sendAppointmentConfirmation } from '../../services/email.service.js';
 
 export const appointmentService = {
   // Lấy tất cả appointments với filters
@@ -41,7 +42,6 @@ export const appointmentService = {
               age: true,
               gender: true,
               user: {
-                // ✅ Sửa
                 select: {
                   firstName: true,
                   lastName: true,
@@ -54,9 +54,9 @@ export const appointmentService = {
           doctor: {
             select: {
               id: true,
+              userId: true,
               specialization: true,
               user: {
-                // ✅ Sửa
                 select: {
                   firstName: true,
                   lastName: true,
@@ -72,9 +72,12 @@ export const appointmentService = {
               address: true,
             },
           },
-          schedule: true,
+          schedule: {
+            include: { room: true },
+          },
           feedback: true,
           payment: true,
+          room: true,
         },
         skip: parseInt(skip),
         take: parseInt(limit),
@@ -140,10 +143,17 @@ export const appointmentService = {
             phone: true,
           },
         },
-        schedule: true,
+        schedule: {
+          select: {
+            id: true,
+            maxPatientsPerSlot: true,
+            room: true,
+          },
+        },
         feedback: true,
         payment: true,
         satisfaction: true,
+        room: true,
       },
     });
 
@@ -154,106 +164,150 @@ export const appointmentService = {
     return appointment;
   },
 
-  // Tạo appointment mới
-  createAppointment: async (data) => {
-    const {
-      patientId,
-      doctorId,
-      clinicId,
-      scheduleId,
-      date,
-      startTime,
-      endTime,
-      start, // ✅ Thêm
-      end, // ✅ Thêm
-      slotStart,
-      slotEnd,
-      slotIndex,
-      reason,
-    } = data;
+  // Tạo appointment mới - với Queue System
+  createAppointment: async (data, maxRetries = 3) => {
+    let attempt = 0;
 
-    // ✅ Ưu tiên startTime, fallback to start, rồi slotStart
-    const validStartTime = startTime || start || slotStart;
-    const validEndTime = endTime || end || slotEnd;
+    while (true) {
+      try {
+        const appointment = await prisma.$transaction(
+          async (tx) => {
+            const {
+              patientId,
+              doctorId,
+              clinicId,
+              scheduleId,
+              date,
+              startTime,
+              endTime,
+              slotIndex,
+              reason,
+            } = data;
 
-    console.log('🔍 Time values:', {
-      startTime,
-      endTime,
-      start,
-      end,
-      slotStart,
-      slotEnd,
-      validStartTime,
-      validEndTime,
-    });
+            const startDate = new Date(startTime);
+            const endDate = new Date(endTime);
 
-    if (!validStartTime || !validEndTime) {
-      throw new Error('Missing startTime or endTime');
-    }
+            // Lấy roomId và maxPatientsPerSlot từ Schedule
+            let roomId = null;
+            let maxPatientsPerSlot = 3;
+            if (scheduleId) {
+              const schedule = await tx.schedule.findUnique({
+                where: { id: parseInt(scheduleId) },
+                select: { roomId: true, maxPatientsPerSlot: true },
+              });
+              if (schedule?.roomId) {
+                roomId = schedule.roomId;
+              }
+              if (schedule?.maxPatientsPerSlot) {
+                maxPatientsPerSlot = schedule.maxPatientsPerSlot;
+              }
+            }
 
-    // ✅ Kiểm tra Date hợp lệ
-    const startDate = new Date(validStartTime);
-    const endDate = new Date(validEndTime);
+            // Đếm số appointment hiện tại trong slot này (chưa bị hủy)
+            const currentBookingsInSlot = await tx.appointment.count({
+              where: {
+                scheduleId: scheduleId ? parseInt(scheduleId) : null,
+                slotIndex: slotIndex || 0,
+                status: { not: 'cancelled' },
+                date: {
+                  gte: new Date(startDate.toDateString()),
+                  lt: new Date(new Date(startDate.toDateString()).getTime() + 86400000),
+                },
+              },
+            });
 
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      throw new Error('Invalid date format for startTime or endTime');
-    }
+            // Kiểm tra nếu slot đã đầy
+            if (currentBookingsInSlot >= maxPatientsPerSlot) {
+              throw new Error('Khung giờ này đã đầy. Vui lòng chọn khung giờ khác.');
+            }
 
-    // Kiểm tra conflict
-    const conflictingAppointment = await prisma.appointment.findFirst({
-      where: {
-        doctorId: parseInt(doctorId),
-        date: new Date(date),
-        status: { not: 'cancelled' },
-        OR: [
-          {
-            AND: [
-              { startTime: { lte: startDate } },
-              { endTime: { gt: startDate } },
-            ],
+            // Tính queueNumber tiếp theo trong slot này
+            const existingAppointments = await tx.appointment.findMany({
+              where: {
+                scheduleId: scheduleId ? parseInt(scheduleId) : null,
+                slotIndex: slotIndex || 0,
+                status: { not: 'cancelled' },
+                date: {
+                  gte: new Date(startDate.toDateString()),
+                  lt: new Date(new Date(startDate.toDateString()).getTime() + 86400000),
+                },
+              },
+              orderBy: { queueNumber: 'desc' },
+              take: 1,
+            });
+
+            const nextQueueNumber = existingAppointments.length > 0
+              ? existingAppointments[0].queueNumber + 1
+              : 1;
+
+            // Tạo appointment
+            const appointment = await tx.appointment.create({
+              data: {
+                patientId: parseInt(patientId),
+                doctorId: parseInt(doctorId),
+                clinicId: parseInt(clinicId),
+                scheduleId: scheduleId ? parseInt(scheduleId) : null,
+                roomId,
+                date: new Date(date),
+                startTime: startDate,
+                endTime: endDate,
+                slotStart: startDate,
+                slotEnd: endDate,
+                slotIndex: slotIndex || 0,
+                queueNumber: nextQueueNumber,
+                queuePosition: `${nextQueueNumber}/${maxPatientsPerSlot}`,
+                reason: reason || null,
+                status: 'pending',
+              },
+              include: {
+                room: true,
+                schedule: {
+                  include: { room: true },
+                },
+              },
+            });
+
+            return appointment;
           },
-          {
-            AND: [
-              { startTime: { lt: endDate } },
-              { endTime: { gte: endDate } },
-            ],
-          },
-        ],
-      },
-    });
+          { isolationLevel: 'Serializable' },
+        );
 
-    if (conflictingAppointment) {
-      throw new Error('Doctor is not available at this time slot');
+        // Gửi email xác nhận sau khi tạo thành công
+        setImmediate(async () => {
+          try {
+            const [patient, doctor, clinic] = await Promise.all([
+              prisma.patient.findUnique({
+                where: { id: appointment.patientId },
+                include: { user: true },
+              }),
+              prisma.doctor.findUnique({
+                where: { id: appointment.doctorId },
+                include: { user: true },
+              }),
+              prisma.clinic.findUnique({
+                where: { id: appointment.clinicId },
+              }),
+            ]);
+            await sendAppointmentConfirmation(appointment, patient, doctor, clinic);
+          } catch (err) {
+            console.error('Error sending confirmation email:', err.message);
+          }
+        });
+
+        return appointment;
+      } catch (err) {
+        if (err.code === 'P2034' && attempt < maxRetries) {
+          attempt++;
+          continue;
+        }
+        throw err;
+      }
     }
-
-    const appointment = await prisma.appointment.create({
-      data: {
-        patientId: parseInt(patientId),
-        doctorId: parseInt(doctorId),
-        clinicId: parseInt(clinicId),
-        scheduleId: scheduleId ? parseInt(scheduleId) : null,
-        date: new Date(date),
-        startTime: startDate,
-        endTime: endDate,
-        slotStart: startDate,
-        slotEnd: endDate,
-        slotIndex: slotIndex || 0,
-        reason: reason || null,
-        status: 'pending',
-      },
-      include: {
-        patient: true,
-        doctor: true,
-        clinic: true,
-        schedule: true,
-      },
-    });
-
-    return appointment;
   },
+
   // Cập nhật appointment
   updateAppointment: async (id, data) => {
-    const { date, startTime, endTime, reason, status, scheduleId } = data;
+    const { date, startTime, endTime, reason, status, scheduleId, roomId } = data;
 
     const updateData = {};
     if (date) updateData.date = new Date(date);
@@ -263,6 +317,8 @@ export const appointmentService = {
     if (status) updateData.status = status;
     if (scheduleId !== undefined)
       updateData.scheduleId = scheduleId ? parseInt(scheduleId) : null;
+    if (roomId !== undefined)
+      updateData.roomId = roomId ? parseInt(roomId) : null;
 
     const appointment = await prisma.appointment.update({
       where: { id: parseInt(id) },
@@ -271,7 +327,10 @@ export const appointmentService = {
         patient: true,
         doctor: true,
         clinic: true,
-        schedule: true,
+        schedule: {
+          include: { room: true },
+        },
+        room: true,
       },
     });
 
@@ -329,7 +388,7 @@ export const appointmentService = {
         include: {
           patient: {
             select: {
-              id: true, // 👈 CÁI NÀY RẤT QUAN TRỌNG
+              id: true,
               user: {
                 select: {
                   firstName: true,
@@ -341,6 +400,7 @@ export const appointmentService = {
           doctor: {
             select: {
               id: true,
+              userId: true,
               specialization: true,
               user: {
                 select: {
@@ -356,6 +416,10 @@ export const appointmentService = {
               name: true,
               address: true,
             },
+          },
+          room: true,
+          schedule: {
+            include: { room: true },
           },
         },
       }),
@@ -400,7 +464,6 @@ export const appointmentService = {
             select: {
               id: true,
               user: {
-                // ✅ Sửa
                 select: {
                   firstName: true,
                   lastName: true,
@@ -418,12 +481,21 @@ export const appointmentService = {
           },
           feedback: true,
           payment: true,
+          room: true,
+          schedule: {
+            select: {
+              id: true,
+              maxPatientsPerSlot: true,
+            },
+          },
         },
         skip: parseInt(skip),
         take: parseInt(limit),
-        orderBy: {
-          startTime: 'asc',
-        },
+        orderBy: [
+          { date: 'asc' },
+          { startTime: 'asc' },
+          { queueNumber: 'asc' },
+        ],
       }),
       prisma.appointment.count({ where }),
     ]);
@@ -504,6 +576,7 @@ export const appointmentService = {
             address: true,
           },
         },
+        room: true,
       },
     });
 
@@ -618,7 +691,10 @@ export const appointmentService = {
             address: true,
           },
         },
-        schedule: true,
+        schedule: {
+          include: { room: true },
+        },
+        room: true,
       },
     });
 
@@ -688,6 +764,7 @@ export const appointmentService = {
             address: true,
           },
         },
+        room: true,
       },
     });
 
@@ -797,5 +874,34 @@ export const appointmentService = {
         noShow,
       },
     };
+  },
+
+  // Backfill roomId cho các appointment cũ chưa có roomId
+  backfillRoomId: async () => {
+    // Lấy tất cả appointment chưa có roomId nhưng có scheduleId
+    const appointments = await prisma.appointment.findMany({
+      where: {
+        roomId: null,
+        scheduleId: { not: null },
+      },
+      include: {
+        schedule: {
+          select: { roomId: true },
+        },
+      },
+    });
+
+    let updated = 0;
+    for (const apt of appointments) {
+      if (apt.schedule?.roomId) {
+        await prisma.appointment.update({
+          where: { id: apt.id },
+          data: { roomId: apt.schedule.roomId },
+        });
+        updated++;
+      }
+    }
+
+    return { updated, total: appointments.length };
   },
 };

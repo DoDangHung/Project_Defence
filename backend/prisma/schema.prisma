@@ -8,6 +8,28 @@ datasource db {
 }
 
 // ====================================
+// SERVICE CATEGORY MODEL
+// ====================================
+
+model ServiceCategory {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  icon        String? // icon name for frontend
+  color       String? // hex color code for UI
+  priority    Int     @default(0) // display order
+  isActive    Boolean @default(true)
+
+  // Relations
+  clinics     Clinic[]
+  specialties Specialty[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ====================================
 // ROLE & USER MODELS
 // ====================================
 
@@ -49,8 +71,8 @@ model User {
   patient          Patient?
   doctor           Doctor?
   notifications    Notification[]
-  sentMessages     Message[]      @relation("SentMessages")
-  receivedMessages Message[]      @relation("ReceivedMessages")
+  sentMessages     Message[]      @relation("MessageSender")
+  receivedMessages Message[]      @relation("MessageReceiver")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -72,13 +94,17 @@ model Admin {
 
 model Specialty {
   id          Int     @id @default(autoincrement())
-  name        String  @unique
+  name        String
   slug        String  @unique
   description String?
-  icon        String? // icon frontend
-  image       String? // banner hình
+  icon        String?
+  image       String?
   isActive    Boolean @default(true)
-  priority    Int     @default(0) // sắp xếp hiển thị
+  priority    Int     @default(0)
+
+  // Category
+  categoryId Int?
+  category   ServiceCategory? @relation(fields: [categoryId], references: [id])
 
   // Relations
   doctors Doctor[]
@@ -86,6 +112,8 @@ model Specialty {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([categoryId, name])
 }
 
 model Clinic {
@@ -94,7 +122,7 @@ model Clinic {
   slug        String  @unique
   description String?
   logo        String?
-  images      Json? // gallery hình ảnh
+  images      Json?
 
   phone String?
   email String?
@@ -106,14 +134,22 @@ model Clinic {
   latitude  Float?
   longitude Float?
 
-  openingTime String? // "08:00"
-  closingTime String? // "17:00"
+  acceptedInsurances String[] @default([])
+
+  openingTime String?
+  closingTime String?
   isActive    Boolean @default(true)
 
+  // Category
+  categoryId Int?
+  category   ServiceCategory? @relation(fields: [categoryId], references: [id])
+
   // Relations
-  specialties  ClinicSpecialty[]
-  doctors      Doctor[]          @relation("DoctorClinics")
-  appointments Appointment[]
+  specialties       ClinicSpecialty[]
+  doctors           Doctor[]                 @relation("DoctorClinics")
+  doctorAssignments DoctorClinicAssignment[]
+  schedules         Schedule[]
+  appointments      Appointment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -136,16 +172,17 @@ model ClinicSpecialty {
 // ROOM MODEL
 // ====================================
 model Room {
-  id         Int    @id @default(autoincrement())
-  roomNumber String @unique
-  type       String // ICU, General, Private, Emergency
-  status     String @default("available") // available, full, maintenance
-  schedules  Schedule[]   
-  admissions Admission[]
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id                Int                      @id @default(autoincrement())
+  roomNumber        String                   @unique
+  type              String // ICU, General, Private, Emergency
+  status            String                   @default("available") // available, full, maintenance
+  schedules         Schedule[]
+  admissions        Admission[]
+  doctorAssignments DoctorClinicAssignment[]
+  appointments      Appointment[]
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
 }
-
 
 // ====================================
 // ADMINSSION MODEL
@@ -168,10 +205,10 @@ model Admission {
   doctor  Doctor? @relation(fields: [doctorId], references: [id])
   room    Room?   @relation(fields: [roomId], references: [id])
 
-  finance                Finance[]
+  finance Finance[]
 
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ====================================
@@ -223,25 +260,23 @@ model Satisfaction {
 // ====================================
 
 model Patient {
-  id                     Int              @id @default(autoincrement())
-  userId                 Int              @unique
-  user                   User             @relation(fields: [userId], references: [id])
-  age                    Int?
-  condition              String?
-  gender                 String?
-  admissions             Admission[]
-  finances               Finance[]
-  payment                Payment[]
-  feedback               Feedback[]
-  appointment            Appointment[]
-  satisfaction           Satisfaction[]
-
+  id           Int            @id @default(autoincrement())
+  userId       Int            @unique
+  user         User           @relation(fields: [userId], references: [id])
+  age          Int?
+  condition    String?
+  gender       String?
+  admissions   Admission[]
+  finances     Finance[]
+  payment      Payment[]
+  feedback     Feedback[]
+  appointment  Appointment[]
+  satisfaction Satisfaction[]
 }
 
 // ====================================
 //  DOCTOR MODELS
 // ====================================
-
 
 model Doctor {
   id     Int  @id @default(autoincrement())
@@ -252,19 +287,57 @@ model Doctor {
   experience     Int?
   bio            String?
   rating         Float?  @default(0.0)
-  isActive    Boolean @default(true)
+  isActive       Boolean @default(true)
 
-  schedules              Schedule[]
-  appointments           Appointment[]
-  feedbacks              Feedback[]
-  availability           Availability[]
-  satisfaction           Satisfaction[]
-  admissions             Admission[]
+  // Doctor Profile Info (editable by doctor, approved by admin)
+  about        String? // Giới thiệu bản thân
+  education    String? // Học vấn, bằng cấp
+  training     String? // Đào tạo chuyên môn
+  achievements String? // Thành tích, giải thưởng
+  languages    String? // Ngôn ngữ (VD: Tiếng Việt, Tiếng Anh)
+  services     String? // Các dịch vụ khám (VD: Khám tổng quát, Tư vấn sức khỏe)
+
+  // Admin approval fields
+  isProfileApproved Boolean   @default(false) // Admin đã duyệt thông tin
+  profileApprovedAt DateTime?
+  profileApprovedBy Int? // Admin ID who approved
+
+  schedules         Schedule[]
+  appointments      Appointment[]
+  feedbacks         Feedback[]
+  availability      Availability[]
+  satisfaction      Satisfaction[]
+  admissions        Admission[]
   // Relations
-  specialties            Specialty[]
-  clinics                Clinic[]         @relation("DoctorClinics") // Thêm tên relation
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime         @updatedAt
+  specialties       Specialty[]
+  clinics           Clinic[]                 @relation("DoctorClinics") // Thêm tên relation
+  clinicAssignments DoctorClinicAssignment[]
+  createdAt         DateTime                 @default(now())
+  updatedAt         DateTime                 @updatedAt
+}
+
+// ====================================
+// DOCTOR CLINIC ASSIGNMENT MODEL
+// ====================================
+
+model DoctorClinicAssignment {
+  id        Int     @id @default(autoincrement())
+  doctorId  Int
+  clinicId  Int
+  roomId    Int?
+  isPrimary Boolean @default(false) // Phòng khám chính
+  status    String  @default("active") // active, inactive
+
+  doctor Doctor @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  room   Room?  @relation(fields: [roomId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([doctorId, clinicId])
+  @@index([doctorId])
+  @@index([clinicId])
 }
 
 // ====================================
@@ -285,46 +358,58 @@ model Availability {
 // ====================================
 
 model Schedule {
-  id          Int      @id @default(autoincrement())
-  doctorId    Int
-  date        DateTime
-  startTime   DateTime
-  endTime     DateTime
-  slotStart  DateTime @default(now())       // ← Thêm default
-  slotEnd    DateTime @default(now())  
-  isAvailable Boolean  @default(true)
-  roomId      Int   
-  slotDuration Int       @default(60) // Độ dài mỗi slot (phút)
-  totalSlots   Int       @default(1) // ← Thêm default// Tổng số slot
-  doctor       Doctor        @relation(fields: [doctorId], references: [id])
-  room         Room?     @relation(fields: [roomId], references: [id])
-  appointments Appointment[]
+  id                 Int           @id @default(autoincrement())
+  doctorId           Int
+  clinicId           Int
+  date               DateTime
+  startTime          DateTime
+  endTime            DateTime
+  slotStart          DateTime      @default(now()) // ← Thêm default
+  slotEnd            DateTime      @default(now())
+  isAvailable        Boolean       @default(true)
+  roomId             Int
+  slotDuration       Int           @default(30) // Độ dài mỗi slot (phút) - mặc định 30 phút
+  totalSlots         Int           @default(1) // ← Thêm default// Tổng số slot
+  maxPatientsPerSlot Int           @default(3) // Số bệnh nhân tối đa trong mỗi khung giờ
+  doctor             Doctor        @relation(fields: [doctorId], references: [id])
+  clinic             Clinic        @relation(fields: [clinicId], references: [id])
+  room               Room?         @relation(fields: [roomId], references: [id])
+  appointments       Appointment[]
+
+  @@index([doctorId, date])
+  @@index([clinicId])
 }
 
 model Appointment {
-  id         Int      @id @default(autoincrement())
-  patientId  Int
-  doctorId   Int
-  clinicId   Int
-  scheduleId Int?
-  date       DateTime
-  startTime  DateTime
-  endTime    DateTime
-  slotIndex  Int      @default(0)           // ← Thêm default
-  slotStart  DateTime @default(now())       // ← Thêm default
-  slotEnd    DateTime @default(now())  
-  reason     String?
-  status     String   @default("pending")
-  patient  Patient   @relation(fields: [patientId], references: [id])
-  schedule Schedule? @relation(fields: [scheduleId], references: [id])
-  clinic   Clinic    @relation(fields: [clinicId], references: [id])
-  doctor   Doctor    @relation(fields: [doctorId], references: [id])
-  feedback Feedback? @relation("AppointmentFeedback")
-  payment  Payment?
+  id            Int            @id @default(autoincrement())
+  patientId     Int
+  doctorId      Int
+  clinicId      Int
+  scheduleId    Int?
+  roomId        Int?
+  date          DateTime
+  startTime     DateTime
+  endTime       DateTime
+  slotIndex     Int            @default(0)
+  slotStart     DateTime       @default(now())
+  slotEnd       DateTime       @default(now())
+  queueNumber   Int            @default(1) // Số thứ tự trong khung giờ
+  queuePosition String         @default("1/3") // Vị trí: X/Y (X = thứ tự, Y = tổng số)
+  reason        String?
+  status        String         @default("pending")
+  patient       Patient        @relation(fields: [patientId], references: [id])
+  schedule      Schedule?      @relation(fields: [scheduleId], references: [id])
+  clinic        Clinic         @relation(fields: [clinicId], references: [id])
+  doctor        Doctor         @relation(fields: [doctorId], references: [id])
+  room          Room?          @relation(fields: [roomId], references: [id])
+  feedback      Feedback?      @relation("AppointmentFeedback")
+  payment       Payment?
+  messages      Message[]
+  satisfaction  Satisfaction[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  satisfaction Satisfaction[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  @@index([doctorId, date])
 }
 
 // ====================================
@@ -332,18 +417,42 @@ model Appointment {
 // ====================================
 
 model Feedback {
-  id            Int     @id @default(autoincrement())
+  id            Int  @id @default(autoincrement())
   patientId     Int
   doctorId      Int
-  appointmentId Int?    @unique // ✅ thêm @unique
-  rating        Int
-  comment       String?
+  appointmentId Int? @unique // Mỗi lịch hẹn chỉ feedback 1 lần
 
+  // Rating (1-5 sao)
+  rating Int // 1, 2, 3, 4, 5
+
+  // Nội dung đánh giá
+  comment String? @db.Text
+
+  // Khía cạnh đánh giá
+  professionalism Int? // 1-5: Chuyên môn
+  punctuality     Int? // 1-5: Đúng giờ
+  communication   Int? // 1-5: Giao tiếp
+  facilities      Int? // 1-5: Cơ sở vật chất
+
+  // Reply từ bác sĩ (nếu có)
+  doctorReply String?   @db.Text
+  repliedAt   DateTime?
+
+  // Trạng thái
+  status String @default("visible") // visible, hidden, flagged
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
   patient     Patient      @relation(fields: [patientId], references: [id])
   doctor      Doctor       @relation(fields: [doctorId], references: [id])
   appointment Appointment? @relation("AppointmentFeedback", fields: [appointmentId], references: [id])
 
-  createdAt DateTime @default(now())
+  @@index([doctorId])
+  @@index([patientId])
+  @@index([rating])
 }
 
 // ====================================
@@ -354,6 +463,11 @@ model Feedback {
 // PAYMENT MODEL - Updated for Hybrid Payment System
 // ====================================
 
+// Refund policy enum for reference:
+// - Cancel >24h before appointment: 100% refund
+// - Cancel >12h before appointment: 50% refund
+// - Cancel <2h before appointment: 0% refund (forfeit deposit)
+
 model Payment {
   id            Int @id @default(autoincrement())
   appointmentId Int @unique
@@ -361,21 +475,25 @@ model Payment {
 
   // Phí khám
   consultationFee Float // Phí khám gốc
-  depositAmount   Float // Tiền đặt cọc (30-50% consultationFee)
-  remainingAmount Float // Còn phải trả
+  depositAmount   Float // Tiền đặt cọc (25% consultationFee)
+  remainingAmount Float // Còn phải trả (75% consultationFee)
   totalPaid       Float @default(0) // Tổng đã thanh toán
 
   // Trạng thái thanh toán
-  depositStatus String @default("pending") // pending, paid, refunded, failed
-  paymentStatus String @default("pending") // pending, partial, completed, refunded
+  depositStatus String @default("pending") // pending, paid, refunded, failed, forfeited
+  paymentStatus String @default("pending") // pending, partial, completed, refunded, forfeited
 
   // Transaction IDs
   depositTransactionId String? // ID giao dịch đặt cọc
   finalTransactionId   String? // ID giao dịch thanh toán cuối
 
   // Phương thức thanh toán
-  paymentMethod   String? // stripe, payos, cash, free_booking
-  paymentProvider String? // stripe, payos (để phân biệt gateway)
+  // cash: Thanh toán khi đến khám (không cần đặt cọc)
+  // visa_mastercard: Thẻ Visa/Mastercard (đặt cọc 25%)
+  // apple_google_pay: Apple Pay / Google Pay (đặt cọc 25%)
+  // bank_transfer: Chuyển khoản ngân hàng (đặt cọc 25%)
+  paymentMethod   String? // cash, visa_mastercard, apple_google_pay, bank_transfer
+  paymentProvider String? // stripe, payos, internal (để phân biệt gateway)
 
   // Thông tin gateway
   stripePaymentIntentId String? // Stripe Payment Intent ID
@@ -385,9 +503,15 @@ model Payment {
   additionalCharges Json? @default("[]") // [{service: "Xét nghiệm", amount: 150000, status: "paid"}]
 
   // Refund policy
-  refundAmount Float?    @default(0) // Số tiền đã hoàn
-  refundReason String? // Lý do hoàn tiền
-  refundedAt   DateTime?
+  refundAmount     Float?    @default(0) // Số tiền đã hoàn (nếu hủy trước 24h)
+  refundPercentage Float?    @default(100) // Phần trăm hoàn: 100, 50, hoặc 0
+  refundReason     String? // Lý do hoàn tiền
+  refundedAt       DateTime?
+  forfeitedAt      DateTime? // Thời điểm mất deposit (hủy trong 2h)
+
+  // Appointment cancellation tracking
+  cancellationDeadline        DateTime? // Thời hạn hủy miễn phí (appointmentTime - 24h)
+  cancellationHalfwayDeadline DateTime? // Thời hạn hủy hoàn 50% (appointmentTime - 12h)
 
   // Timestamps
   depositPaidAt DateTime?
@@ -396,8 +520,9 @@ model Payment {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
-  patient     Patient     @relation(fields: [patientId], references: [id])
+  appointment  Appointment          @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  patient      Patient              @relation(fields: [patientId], references: [id])
+  transactions PaymentTransaction[]
 
   @@index([patientId])
   @@index([paymentStatus])
@@ -405,41 +530,112 @@ model Payment {
 }
 
 // ====================================
-// PAYMENT TRANSACTION LOG (Optional - for audit)
+// PAYMENT TRANSACTION LOG - For Audit Trail
 // ====================================
+model PaymentTransaction {
+  id        Int    @id @default(autoincrement())
+  paymentId Int
+  type      String // deposit, final, additional, refund, forfeit
+  amount    Float
+  status    String // pending, completed, failed, refunded
 
+  // Gateway info
+  transactionId   String? // ID từ gateway (Stripe, PayOS)
+  gatewayResponse Json? // Response từ gateway
 
+  // Refund info
+  refundPercentage Float? // % hoàn (100, 50, 0)
+  refundReason     String?
 
+  // Notes
+  note String?
 
-
-
-
-
-
-// ====================================
-// MESSAGE, NOTIFICATION
-// ====================================
-
-model Message {
-  id         Int      @id @default(autoincrement())
-  senderId   Int
-  receiverId Int
-  content    String
-  sentAt     DateTime @default(now())
-
-  sender   User @relation("SentMessages", fields: [senderId], references: [id])
-  receiver User @relation("ReceivedMessages", fields: [receiverId], references: [id])
-}
-
-model Notification {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  title     String
-  message   String
-  isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([type])
+  @@index([status])
 }
 
+// ====================================
+// MESSAGES - Chat giữa bệnh nhân, bác sĩ, admin
+// ====================================
+model Message {
+  id Int @id @default(autoincrement())
 
+  // Người gửi
+  senderId   Int
+  senderType String // 'patient', 'doctor', 'admin'
+
+  // Người nhận
+  receiverId   Int?
+  receiverType String? // 'patient', 'doctor', 'admin'
+
+  // Nội dung
+  content String @db.Text
+
+  // Loại tin nhắn
+  type String @default("text") // text, image, file, system
+
+  // File đính kèm (nếu có)
+  attachmentUrl  String?
+  attachmentName String?
+
+  // Trạng thái đọc
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  // Context (nếu liên quan đến appointment)
+  appointmentId Int?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sender      User?        @relation("MessageSender", fields: [senderId], references: [id])
+  receiver    User?        @relation("MessageReceiver", fields: [receiverId], references: [id])
+  appointment Appointment? @relation(fields: [appointmentId], references: [id], onDelete: SetNull)
+
+  @@index([senderId])
+  @@index([receiverId])
+  @@index([appointmentId])
+  @@index([createdAt])
+}
+
+// ====================================
+// NOTIFICATION - Thông báo
+// ====================================
+model Notification {
+  id       Int    @id @default(autoincrement())
+  userId   Int
+  userType String // 'patient', 'doctor', 'admin'
+
+  // Loại thông báo
+  type String // 'message', 'appointment', 'payment', 'reminder', 'feedback'
+
+  // Nội dung
+  title   String
+  message String @db.Text
+
+  // Liên kết (nếu có)
+  link String?
+
+  // Trạng thái
+  isRead Boolean   @default(false)
+  readAt DateTime?
+
+  // Context
+  relatedId Int? // ID liên quan (appointmentId, messageId, etc.)
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([userType])
+  @@index([isRead])
+  @@index([createdAt])
+}

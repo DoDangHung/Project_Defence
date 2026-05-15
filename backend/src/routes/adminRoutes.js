@@ -13,13 +13,15 @@ router.use(checkAdminRole);
 
 // GET /api/admin/users
 router.get('/users', userController.getAllUsers);
+router.get('/users/admins', userController.getAllAdmins);
+router.get('/users/doctors', userController.getAllDoctors);
+router.get('/users/patients', userController.getAllPatients);
 router.get('/users/:id', userController.getUserById);
 router.put('/users/:id', userController.updateUser);
 
 // POST /api/admin/users
 router.post('/users/doctor', userController.createDoctor);
 router.post('/users/patient', userController.createPatient);
-router.post('/users/nurse', userController.createNurse);
 router.post('/users/admin', userController.createAdmin);
 
 // PUT /api/admin/users/:id

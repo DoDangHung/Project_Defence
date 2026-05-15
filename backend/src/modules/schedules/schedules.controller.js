@@ -10,21 +10,28 @@ export const scheduleController = {
       console.log('req.user.doctorId:', req.user?.doctorId);
       console.log('=================================');
       console.log('Request body:', req.body);
-      const doctorId = req.user?.doctorId;
+      const doctorId = req.user?.doctorId || req.body.doctorId;
       if (!doctorId) {
         return res.status(400).json({
           success: false,
           message: 'Missing doctorId',
-          debug: req.user, // ← Xem req.user có gì
+          debug: req.user,
         });
       }
 
-      const { date, roomId, startTime, endTime, slotDuration = 60 } = req.body;
+      const { clinicId, date, roomId, startTime, endTime, slotDuration = 30 } = req.body;
 
       if (!date || !startTime || !endTime) {
         return res.status(400).json({
           success: false,
           message: 'Missing required fields',
+        });
+      }
+
+      if (!clinicId) {
+        return res.status(400).json({
+          success: false,
+          message: 'Missing clinicId',
         });
       }
 
@@ -51,6 +58,7 @@ export const scheduleController = {
       // Tạo schedule với slots
       const schedule = await schedulesService.createSchedules({
         doctorId,
+        clinicId,
         roomId,
         date: parsedDate,
         startTime: parsedStart,

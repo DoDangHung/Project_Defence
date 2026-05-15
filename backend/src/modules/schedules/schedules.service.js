@@ -37,19 +37,25 @@ export const schedulesService = {
   createSchedules: async (data) => {
     const {
       doctorId,
+      clinicId,
       date,
       startTime,
       endTime,
       roomId,
-      slotDuration = 60,
+      slotDuration = 30,
     } = data;
 
     // Validate và convert sang Number
     const doctorIdNum = parseInt(doctorId);
     const roomIdNum = parseInt(roomId);
+    const clinicIdNum = parseInt(clinicId);
 
     if (isNaN(doctorIdNum)) {
       throw new Error('doctorId không hợp lệ');
+    }
+
+    if (isNaN(clinicIdNum)) {
+      throw new Error('clinicId không hợp lệ');
     }
 
     if (isNaN(roomIdNum)) {
@@ -63,6 +69,15 @@ export const schedulesService = {
 
     if (!doctor) {
       throw new Error(`Doctor với ID ${doctorIdNum} không tồn tại`);
+    }
+
+    // Kiểm tra Clinic có tồn tại
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: clinicIdNum },
+    });
+
+    if (!clinic) {
+      throw new Error(`Clinic với ID ${clinicIdNum} không tồn tại`);
     }
 
     // Kiểm tra Room có tồn tại
@@ -101,6 +116,7 @@ export const schedulesService = {
     return prisma.schedule.create({
       data: {
         doctorId: doctorIdNum,
+        clinicId: clinicIdNum,
         roomId: roomIdNum,
         date: new Date(date),
         startTime: new Date(startTime),
@@ -110,6 +126,7 @@ export const schedulesService = {
       },
       include: {
         doctor: true,
+        clinic: true,
         room: true,
       },
     });
@@ -120,12 +137,18 @@ export const schedulesService = {
     const schedules = await prisma.schedule.findMany({
       where: { doctorId },
       include: {
-        appointments: true,
+        appointments: {
+          where: { status: { not: 'cancelled' } }, // Chỉ lấy appointment chưa bị hủy
+        },
         room: true,
+        clinic: true,
         doctor: {
           include: {
-            specialties: true, // Bác sĩ thuộc chuyên khoa nào
-            clinics: true, // Danh sách phòng khám bác sĩ làm
+            specialties: true,
+            clinicAssignments: {
+              where: { status: 'active' },
+              include: { clinic: true },
+            },
           },
         },
       },
@@ -141,22 +164,30 @@ export const schedulesService = {
         schedule.roomId
       );
 
-      // Đánh dấu slot nào đã book
+      const maxPatients = schedule.maxPatientsPerSlot || 3;
+
+      // Đánh dấu slot nào đã book và đếm số lượt
       const slotsWithStatus = slots.map((slot, index) => {
-        const bookedAppointment = schedule.appointments.find(
+        // Đếm số appointment trong slot này
+        const appointmentsInSlot = schedule.appointments.filter(
           (apt) => apt.slotIndex === index
         );
+        const bookedCount = appointmentsInSlot.length;
+        const remainingSlots = maxPatients - bookedCount;
 
         return {
           index,
           start: slot.start,
           end: slot.end,
-          isBooked: !!bookedAppointment,
-          appointment: bookedAppointment || null,
+          bookedCount,
+          maxPatients,
+          remainingSlots,
+          isFull: remainingSlots <= 0,
+          appointments: appointmentsInSlot,
         };
       });
 
-      const availableSlots = slotsWithStatus.filter((s) => !s.isBooked).length;
+      const availableSlots = slotsWithStatus.filter((s) => !s.isFull).length;
 
       return {
         ...schedule,

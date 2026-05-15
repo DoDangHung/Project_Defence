@@ -1,10 +1,158 @@
 import prisma from '../../config/db.js';
+import xss from 'xss';
+
+// Lấy chi tiết bác sĩ (public - chỉ hiện profile đã duyệt)
+export const getDoctorPublicProfile = async (id) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: Number(id) },
+    include: {
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          avatar: true,
+          phone: true,
+          email: true,
+        },
+      },
+      clinicAssignments: {
+        where: { status: 'active' },
+        include: {
+          clinic: true,
+          room: true,
+        },
+      },
+      feedbacks: {
+        select: {
+          rating: true,
+          comment: true,
+          createdAt: true,
+          patient: {
+            select: {
+              user: {
+                select: {
+                  firstName: true,
+                  avatar: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      },
+      specialties: true,
+    },
+  });
+
+  if (!doctor) return null;
+
+  // Chỉ hiện thông tin profile nếu đã được duyệt
+  return {
+    id: doctor.id,
+    specialization: doctor.specialization,
+    experience: doctor.experience,
+    bio: doctor.bio,
+    rating: doctor.rating,
+    // Profile info - chỉ hiện nếu đã approve
+    about: doctor.isProfileApproved ? doctor.about : null,
+    education: doctor.isProfileApproved ? doctor.education : null,
+    training: doctor.isProfileApproved ? doctor.training : null,
+    achievements: doctor.isProfileApproved ? doctor.achievements : null,
+    languages: doctor.isProfileApproved ? doctor.languages : null,
+    services: doctor.isProfileApproved ? doctor.services : null,
+    user: doctor.user,
+    clinics: doctor.clinicAssignments.map((a) => ({
+      id: a.clinic.id,
+      name: a.clinic.name,
+      address: a.clinic.address,
+      phone: a.clinic.phone,
+      room: a.room,
+    })),
+    feedbacks: doctor.feedbacks,
+    specialties: doctor.specialties,
+    stats: {
+      totalFeedbacks: doctor.feedbacks.length,
+      averageRating: doctor.rating || 0,
+    },
+  };
+};
+
+// Cập nhật profile cá nhân của bác sĩ (chờ duyệt)
+export const updateDoctorProfile = async (doctorId, data) => {
+  const doctor = await prisma.doctor.findUnique({
+    where: { id: doctorId },
+  });
+
+  if (!doctor) throw new Error('Doctor not found');
+
+  // Reset approval status khi có thay đổi
+  return prisma.doctor.update({
+    where: { id: doctorId },
+    data: {
+      about: data.about,
+      education: data.education,
+      training: data.training,
+      achievements: data.achievements,
+      languages: data.languages,
+      services: data.services,
+      isProfileApproved: false, // Reset để chờ duyệt lại
+    },
+  });
+};
+
+// Admin duyệt profile bác sĩ
+export const approveDoctorProfile = async (adminId, doctorId) => {
+  return prisma.doctor.update({
+    where: { id: doctorId },
+    data: {
+      isProfileApproved: true,
+      profileApprovedAt: new Date(),
+      profileApprovedBy: adminId,
+    },
+  });
+};
+
+// Lấy danh sách bác sĩ chờ duyệt profile
+export const getPendingDoctorProfiles = async () => {
+  return prisma.doctor.findMany({
+    where: { isProfileApproved: false },
+    include: {
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatar: true,
+        },
+      },
+    },
+    orderBy: { updatedAt: 'desc' },
+  });
+};
+
+// Doctor Panel: Lấy profile hiện tại
+export const getDoctorMyProfile = async (doctorId) => {
+  return prisma.doctor.findUnique({
+    where: { id: doctorId },
+    include: {
+      user: {
+        select: {
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatar: true,
+          phone: true,
+        },
+      },
+    },
+  });
+};
 
 export const getDoctorById = async (id) => {
   return prisma.doctor.findUnique({
     where: { id: Number(id) },
     include: {
-      department: true,
       schedules: true,
       appointments: true,
       clinics: true,
@@ -36,10 +184,7 @@ export const getDoctorsByClinic = async (clinicId) => {
 };
 
 export const getDoctorsByDepartment = async (departmentId) => {
-  return prisma.doctor.findMany({
-    where: { departmentId: Number(departmentId) },
-    include: { department: true },
-  });
+  return prisma.doctor.findMany({});
 };
 
 // Lấy danh sách bệnh nhân của bác sĩ (đang + đã khám)
@@ -152,7 +297,6 @@ export const getDoctorPatientsWithStats = async (doctorId) => {
 export const createDoctor = async (data) => {
   return prisma.doctor.create({
     data,
-    include: { department: true },
   });
 };
 
@@ -160,22 +304,30 @@ export const updateDoctor = async (id, data) => {
   return prisma.doctor.update({
     where: { id: Number(id) },
     data,
-    include: { department: true },
   });
 };
 
 export const buildSearchQuery = (q) => {
   if (!q) return {};
-
+  const safeQ = xss(q);
   return {
     OR: [
-      { name: { contains: q, mode: 'insensitive' } },
-      { email: { contains: q, mode: 'insensitive' } },
-      { phone: { contains: q, mode: 'insensitive' } },
-      { specialization: { contains: q, mode: 'insensitive' } },
       {
-        department: {
-          name: { contains: q, mode: 'insensitive' },
+        specialization: {
+          contains: safeQ,
+          mode: 'insensitive',
+        },
+      },
+      {
+        user: {
+          is: {
+            OR: [
+              { firstName: { contains: safeQ, mode: 'insensitive' } },
+              { lastName: { contains: safeQ, mode: 'insensitive' } },
+              { email: { contains: safeQ, mode: 'insensitive' } },
+              { phone: { contains: safeQ, mode: 'insensitive' } },
+            ],
+          },
         },
       },
     ],
@@ -199,27 +351,10 @@ export const buildSort = (sortBy = 'createdAt', order = 'desc') => {
 };
 
 export const filterDoctors = (params) => {
-  const {
-    departmentId,
-    departmentName,
-    specialization,
-    minExperience,
-    maxExperience,
-    minRating,
-    maxRating,
-  } = params;
+  const { specialization, minExperience, maxExperience, minRating, maxRating } =
+    params;
 
   const where = {};
-
-  // Filter theo department ID
-  if (departmentId) where.departmentId = Number(departmentId);
-
-  // Filter theo department name
-  if (departmentName) {
-    where.department = {
-      name: { contains: departmentName, mode: 'insensitive' },
-    };
-  }
 
   // Filter specialization
   if (specialization) {
@@ -259,7 +394,6 @@ export const getFilteredDoctors = async (params) => {
     prisma.doctor.findMany({
       where,
       include: {
-        department: true,
         clinics: true,
         user: {
           // ✅ THÊM DÒNG NÀY

@@ -128,14 +128,30 @@ export const clinicsController = {
   },
   createClinic: async (req, res) => {
     try {
-      const logoFile = req.files['logo'] ? req.files['logo'][0] : null;
-      const imageFiles = req.files['images'] || [];
+      // Xử lý JSON body (logo là URL string)
+      const clinic = await clinicService.createClinic(req.body, null, []);
 
-      const clinic = await clinicService.createClinic(
-        req.body,
-        logoFile,
-        imageFiles
-      );
+      res.status(201).json({
+        success: true,
+        message: 'Clinic created successfully',
+        data: clinic,
+      });
+    } catch (error) {
+      res.status(400).json({
+        success: false,
+        message: 'Error creating clinic',
+        error: error.message,
+      });
+    }
+  },
+
+  // POST /api/clinics/upload - với upload file
+  createClinicWithUpload: async (req, res) => {
+    try {
+      const logoFile = req.files && req.files['logo'] ? req.files['logo'][0] : null;
+      const imageFiles = (req.files && req.files['images']) || [];
+
+      const clinic = await clinicService.createClinic(req.body, logoFile, imageFiles);
 
       res.status(201).json({
         success: true,

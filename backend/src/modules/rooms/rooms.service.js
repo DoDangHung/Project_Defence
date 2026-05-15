@@ -11,7 +11,6 @@ export const roomService = {
     return prisma.room.findMany({
       include: {
         schedules: true,
-        beds: true,
         admissions: true,
       },
     });
@@ -22,7 +21,6 @@ export const roomService = {
       where: { id: Number(roomId) },
       include: {
         schedules: true,
-        beds: true,
         admissions: true,
       },
     });

@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import BookingHomePage from './Steps/BookingHomePage';
+import SpecialtyDetail from './Steps/SpecialtyDetail';
+import StepClinic from './Steps/StepClinic';
 
 export default function Booking() {
   const location = useLocation();

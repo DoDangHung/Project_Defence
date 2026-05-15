@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+/** @format */
+
+import React, { useState } from "react";
 import {
   User,
   Lock,
@@ -7,38 +9,38 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-} from 'lucide-react';
+} from "lucide-react";
 
 const Auth = () => {
-  const [userType, setUserType] = useState('admin'); // 'admin' or 'doctor'
+  const [userType, setUserType] = useState("admin"); // 'admin' or 'doctor'
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const handleInputChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setError('');
+    setError("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
-    setSuccess('');
+    setError("");
+    setSuccess("");
 
     try {
-      const response = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email: formData.email,
@@ -50,32 +52,43 @@ const Auth = () => {
       const data = await response.json();
 
       if (response.ok) {
-        const result = data.data; // 🟢 LẤY ĐÚNG ĐẶC TẢ BACKEND
+        const result = data.data;
         localStorage.clear();
         sessionStorage.clear();
 
-        sessionStorage.setItem('token', result.token);
-        sessionStorage.setItem('user', JSON.stringify(result.user));
-        sessionStorage.setItem('userType', result.user.role.name);
+        sessionStorage.setItem("token", result.token);
+        sessionStorage.setItem("user", JSON.stringify(result.user));
+        sessionStorage.setItem("userType", result.user.role.name);
+
+        const roleName = result.user.role.name?.toLowerCase();
+        const redirectPath =
+          roleName === "admin"
+            ? "/admin/dashboard"
+            : roleName === "doctor"
+              ? "/doctor/overview"
+              : "/";
 
         setSuccess(
-          `Đăng nhập thành công! Chào mừng ${
-            result.user.role.name === 'Admin' ? 'Admin' : 'Bác sĩ'
-          }`
+          `Login successful! Welcome ${
+            roleName === "admin"
+              ? "Admin"
+              : roleName === "doctor"
+                ? "Doctor"
+                : "User"
+          }`,
         );
 
         setTimeout(() => {
-          window.location.href =
-            result.user.role.name === 'Admin' ? '/admin/dashboard' : '/doctor';
+          window.location.href = redirectPath;
         }, 1000);
       } else {
         setError(
-          data.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.'
+          data.message || "Login failed. Please check your information.",
         );
       }
     } catch (err) {
-      setError('Không thể kết nối đến server. Vui lòng thử lại sau.');
-      console.error('Login error:', err);
+      setError("Cannot connect to server. Please try again later.");
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -92,7 +105,7 @@ const Auth = () => {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
             Medical System
           </h1>
-          <p className="text-gray-600">Đăng nhập vào hệ thống</p>
+          <p className="text-gray-600">Log in to the system</p>
         </div>
 
         {/* User Type Selection */}
@@ -100,14 +113,14 @@ const Auth = () => {
           <button
             type="button"
             onClick={() => {
-              setUserType('admin');
-              setError('');
-              setSuccess('');
+              setUserType("admin");
+              setError("");
+              setSuccess("");
             }}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${
-              userType === 'admin'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-blue-300'
+              userType === "admin"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                : "bg-white text-gray-600 border-2 border-gray-200 hover:border-blue-300"
             }`}
           >
             <UserCog className="w-5 h-5" />
@@ -116,18 +129,18 @@ const Auth = () => {
           <button
             type="button"
             onClick={() => {
-              setUserType('doctor');
-              setError('');
-              setSuccess('');
+              setUserType("doctor");
+              setError("");
+              setSuccess("");
             }}
             className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl font-medium transition-all ${
-              userType === 'doctor'
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-200'
-                : 'bg-white text-gray-600 border-2 border-gray-200 hover:border-blue-300'
+              userType === "doctor"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-200"
+                : "bg-white text-gray-600 border-2 border-gray-200 hover:border-blue-300"
             }`}
           >
             <Stethoscope className="w-5 h-5" />
-            Bác sĩ
+            Doctor
           </button>
         </div>
 
@@ -156,12 +169,12 @@ const Auth = () => {
             {/* Password Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mật khẩu
+                Password
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
@@ -191,14 +204,14 @@ const Auth = () => {
                   className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                 />
                 <span className="ml-2 text-sm text-gray-600">
-                  Ghi nhớ đăng nhập
+                  Remember to log in
                 </span>
               </label>
               <a
                 href="#"
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
-                Quên mật khẩu?
+                Forget Password?
               </a>
             </div>
 
@@ -225,8 +238,8 @@ const Auth = () => {
               onClick={handleSubmit}
               className={`w-full py-3 px-4 rounded-xl font-medium text-white transition-all ${
                 loading
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 hover:shadow-xl'
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 hover:shadow-xl"
               }`}
             >
               {loading ? (
@@ -247,33 +260,18 @@ const Auth = () => {
                       d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                     />
                   </svg>
-                  Đang xử lý...
+                  Processing...
                 </span>
               ) : (
-                `Đăng nhập với tư cách ${
-                  userType === 'admin' ? 'Admin' : 'Bác sĩ'
-                }`
+                `Log in as ${userType === "admin" ? "Admin" : "Doctor"}`
               )}
             </button>
-          </div>
-
-          {/* Additional Info */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Chưa có tài khoản?{' '}
-              <a
-                href="#"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
-                Đăng ký ngay
-              </a>
-            </p>
           </div>
         </div>
 
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>© 2024 Medical System. All rights reserved.</p>
+          <p>© 2025 Medical System. All rights reserved.</p>
         </div>
       </div>
     </div>

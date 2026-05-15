@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import {
+  useTranslation,
+} from 'react-i18next';
+import {
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -11,6 +14,7 @@ import {
 } from 'lucide-react';
 
 const ScheduleCalendar = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -54,7 +58,7 @@ const ScheduleCalendar = () => {
         setLoading(false);
       })
       .catch((err) => {
-        setError('Không thể tải danh sách lịch hẹn');
+        setError(t('messages.error'));
         console.error(err);
         setLoading(false);
       });
@@ -175,9 +179,9 @@ const ScheduleCalendar = () => {
 
   const getViewLabel = () => {
     const labels = {
-      month: 'Month view',
-      week: 'Week view',
-      day: 'Day view',
+      month: t('appointment.monthView'),
+      week: t('appointment.weekView'),
+      day: t('appointment.dayView'),
     };
     return labels[viewMode];
   };
@@ -218,7 +222,7 @@ const ScheduleCalendar = () => {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Đang tải lịch hẹn...</p>
+          <p className="text-gray-600">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -233,7 +237,7 @@ const ScheduleCalendar = () => {
             onClick={() => window.location.reload()}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
-            Thử lại
+            {t('common.refresh')}
           </button>
         </div>
       </div>
@@ -241,58 +245,58 @@ const ScheduleCalendar = () => {
   }
 
   return (
-    <div className="min-h-screen -mt-7 p-6">
+    <div className="min-h-screen -mt-4 md:-mt-7 p-3 md:p-6">
       <div className="mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 md:mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-6 w-full sm:w-auto">
             {/* Date Display */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 md:gap-4">
               <div className="text-center">
-                <div className="text-sm text-gray-500 uppercase tracking-wide">
+                <div className="text-xs md:text-sm text-gray-500 uppercase tracking-wide">
                   {monthNames[currentDate.getMonth()].substring(0, 3)}
                 </div>
-                <div className="text-3xl font-bold text-blue-600">
+                <div className="text-2xl md:text-3xl font-bold text-blue-600">
                   {new Date().getDate()}
                 </div>
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-base md:text-2xl font-bold text-gray-900">
                   {monthNames[currentDate.getMonth()]}{' '}
                   {currentDate.getFullYear()}
                 </div>
-                <div className="text-sm text-gray-500">Week {weekNumber}</div>
-                <div className="text-sm text-gray-400">
-                  {data.length} appointments
+                <div className="text-xs md:text-sm text-gray-500">Tuần {weekNumber}</div>
+                <div className="text-xs md:text-sm text-gray-400">
+                  {data.length} lịch hẹn
                 </div>
               </div>
             </div>
 
             {/* Navigation */}
-            <div className="flex items-center gap-2 ml-6">
+            <div className="flex items-center gap-1 md:gap-2">
               <button
                 onClick={() => navigateMonth(-1)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <ChevronLeft size={20} className="text-gray-600" />
+                <ChevronLeft size={16} md:size={20} className="text-gray-600" />
               </button>
               <button
                 onClick={goToToday}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="px-2 md:px-4 py-1.5 md:py-2 text-xs md:text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                Today
+                {t('appointment.today')}
               </button>
               <button
                 onClick={() => navigateMonth(1)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-1.5 md:p-2 hover:bg-gray-100 rounded-lg transition-colors"
               >
-                <ChevronRight size={20} className="text-gray-600" />
+                <ChevronRight size={16} md:size={20} className="text-gray-600" />
               </button>
             </div>
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto justify-between sm:justify-end">
             {/* View Mode Dropdown */}
             <div className="relative">
               <button
@@ -428,7 +432,7 @@ const ScheduleCalendar = () => {
                         ))}
                         {moreCount > 0 && (
                           <button className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                            +{moreCount} more
+                            +{moreCount} {t('appointment.more')}
                           </button>
                         )}
                       </div>
@@ -485,7 +489,7 @@ const ScheduleCalendar = () => {
                       {selectedEvent.status.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-sm opacity-75">Appointment Details</p>
+                  <p className="text-sm opacity-75">{t('appointment.appointmentDetails')}</p>
                 </div>
                 <button
                   onClick={() => setSelectedEvent(null)}
@@ -502,7 +506,7 @@ const ScheduleCalendar = () => {
               <div className="flex items-start gap-3">
                 <Clock className="text-blue-600 mt-1" size={20} />
                 <div>
-                  <div className="font-semibold text-gray-900">Time & Date</div>
+                  <div className="font-semibold text-gray-900">{t('common.time')} & {t('common.date')}</div>
                   <div className="text-gray-600">{selectedEvent.date}</div>
                   <div className="text-gray-600">
                     {selectedEvent.startTime} - {selectedEvent.endTime}
@@ -514,7 +518,7 @@ const ScheduleCalendar = () => {
               <div className="flex items-start gap-3">
                 <Stethoscope className="text-green-600 mt-1" size={20} />
                 <div>
-                  <div className="font-semibold text-gray-900">Doctor</div>
+                  <div className="font-semibold text-gray-900">{t('appointment.doctor')}</div>
                   <div className="text-gray-600">
                     {selectedEvent.doctorName}
                   </div>
@@ -529,29 +533,29 @@ const ScheduleCalendar = () => {
                 <User className="text-purple-600 mt-1" size={20} />
                 <div className="flex-1">
                   <div className="font-semibold text-gray-900">
-                    Patient Information
+                    {t('appointment.patient')} Information
                   </div>
                   <div className="grid grid-cols-2 gap-4 mt-2">
                     <div>
-                      <div className="text-sm text-gray-500">Email</div>
+                      <div className="text-sm text-gray-500">{t('common.email')}</div>
                       <div className="text-gray-600">
                         {selectedEvent.patientEmail}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">Phone</div>
+                      <div className="text-sm text-gray-500">{t('common.phone')}</div>
                       <div className="text-gray-600">
                         {selectedEvent.patientPhone}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">Age</div>
+                      <div className="text-sm text-gray-500">{t('users.age')}</div>
                       <div className="text-gray-600">
-                        {selectedEvent.patientAge} years
+                        {selectedEvent.patientAge} {t('doctors.experienceYears')}
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-500">Gender</div>
+                      <div className="text-sm text-gray-500">{t('users.gender')}</div>
                       <div className="text-gray-600 capitalize">
                         {selectedEvent.patientGender}
                       </div>
@@ -563,7 +567,7 @@ const ScheduleCalendar = () => {
               {/* Reason */}
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="font-semibold text-gray-900 mb-2">
-                  Reason for Visit
+                  {t('appointment.reason')}
                 </div>
                 <div className="text-gray-600">{selectedEvent.reason}</div>
               </div>
@@ -571,7 +575,7 @@ const ScheduleCalendar = () => {
               {/* Clinic */}
               <div className="bg-blue-50 p-4 rounded-lg">
                 <div className="font-semibold text-gray-900 mb-2">
-                  Clinic Location
+                  {t('clinic.title')} Location
                 </div>
                 <div className="text-gray-600 font-medium">
                   {selectedEvent.clinicName}
@@ -585,10 +589,10 @@ const ScheduleCalendar = () => {
             {/* Actions */}
             <div className="p-6 border-t bg-gray-50 flex gap-3">
               <button className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                Edit Appointment
+                {t('common.edit')}
               </button>
               <button className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium">
-                Cancel Appointment
+                {t('appointment.cancelAppointment')}
               </button>
             </div>
           </div>

@@ -19,12 +19,15 @@ export default function ViewDoctors() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   useEffect(() => {
+    const token = sessionStorage.getItem('token');
     axios
-      .get(`http://localhost:8080/api/doctors/${id}`)
+      .get(`http://localhost:8080/api/users/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
       .then((res) => {
         console.log('data', res.data);
         console.log('data from View Doctor: ', res.data.data);
-        console.log('User: ', res.data.data.user.firstName);
+        console.log('User: ', res.data.data.firstName);
         setUser(res.data.data);
         setLoading(false);
       })
@@ -87,7 +90,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <textarea
-                            value={user.bio}
+                            value={user?.doctor?.bio || ''}
                             rows={3}
                             className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
                             defaultValue={''}
@@ -118,7 +121,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <input
-                            value={user?.user?.firstName || ''}
+                            value={user?.firstName || ''}
                             readOnly
                             disabled
                             type="text"
@@ -136,7 +139,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <input
-                            value={user?.user?.lastName}
+                            value={user?.lastName || ''}
                             readOnly
                             disabled
                             type="text"
@@ -155,7 +158,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <input
-                            value={user?.user?.email}
+                            value={user?.email || ''}
                             type="email"
                             readOnly
                             disabled
@@ -173,7 +176,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <input
-                            value={user?.user?.streetAddress}
+                            value={user?.streetAddress || ''}
                             readOnly
                             disabled
                             type="text"
@@ -192,7 +195,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <input
-                            value={user?.user?.city}
+                            value={user?.city || ''}
                             readOnly
                             disabled
                             type="text"
@@ -211,7 +214,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <input
-                            value={user?.user?.state}
+                            value={user?.state || ''}
                             readOnly
                             disabled
                             type="text"
@@ -230,7 +233,7 @@ export default function ViewDoctors() {
                         </label>
                         <div className="mt-2">
                           <input
-                            value={user?.user?.postalCode}
+                            value={user?.postalCode || ''}
                             readOnly
                             disabled
                             type="text"

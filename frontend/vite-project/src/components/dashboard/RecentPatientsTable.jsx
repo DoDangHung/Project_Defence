@@ -55,7 +55,6 @@ const RecentPatientsTable = () => {
               <th className="py-2">Patient ID</th>
               <th className="py-2">Ward-Room No.</th>
               <th className="py-2">Assigned Doctor</th>
-              <th className="py-2">Assigned Nurse</th>
               <th className="py-2">Division</th>
             </tr>
           </thead>
@@ -69,7 +68,6 @@ const RecentPatientsTable = () => {
                 <td className="py-3">{r.id}</td>
                 <td className="py-3">{r.ward}</td>
                 <td className="py-3">{r.doctor}</td>
-                <td className="py-3">{r.nurse}</td>
                 <td className="py-3 text-indigo-600 font-medium">
                   {r.division}
                 </td>

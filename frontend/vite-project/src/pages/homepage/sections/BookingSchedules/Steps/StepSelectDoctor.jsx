@@ -12,7 +12,7 @@ import StepSelectTime from './StepSelectTime';
 import { useNavigate, useParams } from 'react-router';
 import axios from 'axios';
 
-const StepSelectDoctor = ({ selectedClinic }) => {
+const StepSelectDoctor = () => {
   const [filters, setFilters] = useState({
     gender: 'all',
     experience: '5+',
@@ -25,18 +25,22 @@ const StepSelectDoctor = ({ selectedClinic }) => {
   const [scheduleData, setScheduleData] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [selectedClinic, setSelectedClinic] = useState(null);
   const { specialtySlug, clinicId } = useParams();
 
   useEffect(() => {
-    axios
-      .get(`http://localhost:8080/api/clinics/${clinicId}/doctors`)
-      .then((res) => {
-        console.log('Doctors data:', res.data);
-        setDoctors(res.data.data || []);
+    if (!clinicId) return;
+    Promise.all([
+      axios.get(`http://localhost:8080/api/clinics/${clinicId}`),
+      axios.get(`http://localhost:8080/api/clinics/${clinicId}/doctors`),
+    ])
+      .then(([clinicRes, doctorsRes]) => {
+        setSelectedClinic(clinicRes.data?.data || clinicRes.data);
+        setDoctors(doctorsRes.data?.data || []);
         setLoading(false);
       })
       .catch((err) => {
-        console.log('Cannot load data:', err.message);
+        console.error('Cannot load data:', err.message);
         setLoading(false);
       });
   }, [clinicId]);
@@ -51,14 +55,14 @@ const StepSelectDoctor = ({ selectedClinic }) => {
       JSON.stringify({
         ...booking,
         doctorId: doctor.id,
-        doctorFirstName: doctor.user.firstName,
-        doctorLastName: doctor.user.lastName,
-        doctorName: `${doctor.user.firstName} ${doctor.user.lastName}`,
+        doctorFirstName: doctor.user?.firstName,
+        doctorLastName: doctor.user?.lastName,
+        doctorName: `${doctor.user?.firstName} ${doctor.user?.lastName}`,
         doctorSpecialization: doctor.specialization,
-        clinicId: doctor.clinics?.[0]?.id,
-        clinicName: doctor.clinics?.[0]?.name,
-        clinicAddress: doctor.clinics?.[0]?.address,
-        consultationFee: doctor.clinics?.[0]?.latitude, // Giá khám (tạm dùng latitude)
+        clinicId: doctor.clinic?.id,
+        clinicName: doctor.clinic?.name,
+        clinicAddress: doctor.clinic?.address,
+        consultationFee: doctor.clinic?.latitude,
       }),
     );
 
@@ -69,13 +73,12 @@ const StepSelectDoctor = ({ selectedClinic }) => {
       const res = await axios.get(
         `http://localhost:8080/api/schedules/doctor/${doctor.id}`,
       );
-      console.log('Schedule data:', res.data);
       setScheduleData((prev) => ({
         ...prev,
         [doctor.id]: res.data.data,
       }));
     } catch (err) {
-      console.log('Cannot load schedule:', err.message);
+      console.error('Cannot load schedule:', err.message);
     }
   };
 
@@ -209,7 +212,7 @@ const StepSelectDoctor = ({ selectedClinic }) => {
                   {/* Doctor Info - Left Side */}
                   <div className="flex gap-4 flex-1">
                     <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center text-white text-2xl font-bold flex-shrink-0 overflow-hidden">
-                      {doc.user.avatar ? (
+                      {doc.user?.avatar ? (
                         <img
                           src={doc.user.avatar}
                           alt={doc.user.firstName}
@@ -217,15 +220,15 @@ const StepSelectDoctor = ({ selectedClinic }) => {
                         />
                       ) : (
                         <span>
-                          {doc.user.firstName.charAt(0)}
-                          {doc.user.lastName.charAt(0)}
+                          {doc.user?.firstName?.charAt(0)}
+                          {doc.user?.lastName?.charAt(0)}
                         </span>
                       )}
                     </div>
 
                     <div className="flex-1">
                       <h3 className="text-lg font-bold text-gray-800">
-                        BS. {doc.user.firstName} {doc.user.lastName}
+                        BS. {doc.user?.firstName} {doc.user?.lastName}
                       </h3>
                       <p className="text-sm text-cyan-600 font-medium mb-2">
                         {doc.specialization}
@@ -249,14 +252,14 @@ const StepSelectDoctor = ({ selectedClinic }) => {
                       </div>
 
                       {/* ✅ THÊM PHẦN HIỂN THỊ GIÁ VÀ PHÒNG KHÁM */}
-                      {doc.clinics && doc.clinics.length > 0 && (
+                      {doc.clinic && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 w-fit">
                             <DollarSign className="w-5 h-5 text-green-600" />
                             <div>
                               <p className="text-xs text-green-700">Phí khám</p>
                               <p className="text-lg font-bold text-green-600">
-                                {doc.clinics[0].latitude?.toLocaleString(
+                                {doc.clinic?.latitude?.toLocaleString(
                                   'vi-VN',
                                 ) || '200,000'}
                                 đ
@@ -268,10 +271,10 @@ const StepSelectDoctor = ({ selectedClinic }) => {
                             <Building2 className="w-4 h-4 mt-0.5 flex-shrink-0" />
                             <div>
                               <p className="font-medium">
-                                {doc.clinics[0].name}
+                                {doc.clinic?.name}
                               </p>
                               <p className="text-xs text-gray-500">
-                                {doc.clinics[0].address}
+                                {doc.clinic?.address}
                               </p>
                             </div>
                           </div>
@@ -308,7 +311,6 @@ const StepSelectDoctor = ({ selectedClinic }) => {
                 doctorId={activeDoctorId}
                 onSelectTime={(schedule) => {
                   setSelectedSchedule(schedule);
-                  console.log('Selected schedule:', schedule);
                 }}
               />
             </div>

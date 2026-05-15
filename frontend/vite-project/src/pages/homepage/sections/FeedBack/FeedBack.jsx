@@ -1,129 +1,97 @@
-import React, { useRef, useState } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import React from 'react';
+import { Star, Users, Heart, Star as StarIcon } from 'lucide-react';
+
 function FeedBack() {
-  const serviceSliderRef = useRef(null);
-  const [currentServiceSlide, setCurrentServiceSlide] = useState(0);
-  const [isAutoPlay, setIsAutoPlay] = useState(true);
+  const stats = [
+    { icon: <Users className="w-6 h-6" />, value: '4.0M+', label: 'Appointments' },
+    { icon: <Heart className="w-6 h-6" />, value: '2500+', label: 'Doctors' },
+    { icon: <StarIcon className="w-6 h-6" />, value: '1.0M+', label: 'Visits' },
+  ];
 
-  const nextServiceSlide = () => {
-    setCurrentServiceSlide(
-      (prev) => (prev + 1) % Math.ceil(services.length / 3)
-    );
-    setIsAutoPlay(false);
-  };
-
-  const prevServiceSlide = () => {
-    setCurrentServiceSlide(
-      (prev) =>
-        (prev - 1 + Math.ceil(services.length / 3)) %
-        Math.ceil(services.length / 3)
-    );
-    setIsAutoPlay(false);
-  };
-
-  const services = [
-    { id: 1, name: 'Khám Tổng Quát', icon: '🏥', price: '500.000đ' },
-    { id: 2, name: 'Nha Khoa', icon: '🦷', price: '300.000đ' },
-    { id: 3, name: 'Tim Mạch', icon: '❤️', price: '800.000đ' },
-    { id: 4, name: 'Da Liễu', icon: '✨', price: '400.000đ' },
-    { id: 5, name: 'Tai Mũi Họng', icon: '👂', price: '350.000đ' },
-    { id: 6, name: 'Mắt', icon: '👁️', price: '450.000đ' },
+  const reviews = [
+    {
+      name: 'Nguyen Thu Lan',
+      initials: 'NL',
+      specialty: 'Ophthalmology',
+      rating: 5,
+      text: '"Booking an appointment through the app was so fast, no queuing required. The doctor was very thorough. I am very satisfied!"',
+    },
+    {
+      name: 'Tran Van Hung',
+      initials: 'TH',
+      specialty: 'Cardiology',
+      rating: 5,
+      text: '"The booking system is convenient, and the SMS reminder was very thoughtful. The nurses were lovely."',
+    },
+    {
+      name: 'Pham Minh Chau',
+      initials: 'PC',
+      specialty: 'Pediatrics',
+      rating: 5,
+      text: '"My child was seen on time, no long waiting. The pediatrician was very gentle with children."',
+    },
   ];
 
   return (
-    <section
-      id="services"
-      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16"
-    >
-      <div className="text-center mb-12">
-        <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
-          Cảm nhận từ khách hàng
-        </h2>
-        <p className="text-gray-600 max-w-2xl mx-auto">
-          Cung cấp đa dạng các dịch vụ chăm sóc sức khỏe với đội ngũ bác sĩ
-          chuyên môn cao
-        </p>
-      </div>
+    <>
+      {/* Testimonial Section - Dark */}
+      <section className="bg-sky-900 py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl font-bold text-white mb-2">
+              What Our Patients Say
+            </h2>
+            <p className="text-sky-200 text-sm">
+              Over 1 million people trust us with their appointments
+            </p>
+          </div>
 
-      <div className="relative">
-        {/* Slider Container */}
-        <div className="overflow-hidden" ref={serviceSliderRef}>
-          <div
-            className="flex transition-transform duration-1500 ease-out"
-            style={{
-              transform: `translateX(-${currentServiceSlide * 100}%)`,
-            }}
-          >
-            {Array.from({ length: Math.ceil(services.length / 3) }).map(
-              (_, slideIndex) => (
-                <div key={slideIndex} className="min-w-full">
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 px-2">
-                    {services
-                      .slice(slideIndex * 3, slideIndex * 3 + 3)
-                      .map((service) => (
-                        <div
-                          key={service.id}
-                          className="bg-white rounded-xl p-6 shadow-lg hover:shadow-2xl transition cursor-pointer border-2 border-transparent hover:border-blue-600"
-                        >
-                          <div className="text-5xl mb-4">{service.icon}</div>
-                          <h3 className="text-xl font-bold mb-2">
-                            {service.name}
-                          </h3>
-                          <p className="text-gray-600 mb-4">
-                            Đặt lịch xét nghiệm bên này rất gọn, có ngày giờ cụ
-                            thể luôn lên là được xét nghiệm liền không rườm rà
-                            gì mấy. An tâm đặt cho gia đình, có cả xét nghiệm
-                            tận nhà, không mất thời gian.
-                          </p>
-                          <div className="flex justify-between items-center">
-                            <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-center">
-                              Đặt Lịch
-                            </button>
-                          </div>
-                        </div>
-                      ))}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {reviews.map((review, i) => (
+              <div
+                key={i}
+                className="bg-white/10 backdrop-blur rounded-2xl p-6 text-white"
+              >
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-full bg-sky-500 border-2 border-sky-300 flex items-center justify-center text-white font-bold text-sm">
+                    {review.initials}
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">{review.name}</h4>
+                    <p className="text-sky-300 text-xs">{review.specialty}</p>
                   </div>
                 </div>
-              )
-            )}
+
+                <div className="flex gap-0.5 mb-3">
+                  {Array.from({ length: review.rating }).map((_, si) => (
+                    <Star key={si} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+
+                <p className="text-sky-100 text-sm leading-relaxed">{review.text}</p>
+              </div>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Navigation Buttons */}
-        <button
-          onClick={prevServiceSlide}
-          className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition z-10"
-        >
-          <ChevronLeft className="w-6 h-6 text-blue-600" />
-        </button>
-        <button
-          onClick={nextServiceSlide}
-          className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white rounded-full p-3 shadow-lg hover:bg-gray-100 transition z-10"
-        >
-          <ChevronRight className="w-6 h-6 text-blue-600" />
-        </button>
-
-        {/* Dots Indicator */}
-        <div className="flex justify-center mt-8 space-x-2">
-          {Array.from({ length: Math.ceil(services.length / 3) }).map(
-            (_, index) => (
-              <button
-                key={index}
-                onClick={() => {
-                  setCurrentServiceSlide(index);
-                  setIsAutoPlay(false);
-                }}
-                className={`h-3 rounded-full transition-all ${
-                  currentServiceSlide === index
-                    ? 'w-8 bg-blue-600'
-                    : 'w-3 bg-gray-300'
-                }`}
-              />
-            )
-          )}
+      {/* Stats Section */}
+      <section className="bg-white py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-3 gap-8">
+            {stats.map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 bg-sky-100 text-sky-600 rounded-full mb-3">
+                  {stat.icon}
+                </div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{stat.value}</div>
+                <div className="text-gray-500 text-sm">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    </>
   );
 }
 

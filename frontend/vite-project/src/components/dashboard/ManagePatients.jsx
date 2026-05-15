@@ -45,16 +45,22 @@ const ManagePatients = () => {
           email: p.user.email,
           phone: p.user.phone,
 
-          // 🩺 Medical (tạm thời)
+          // 🩺 Medical
           recentProcedure: p.condition ?? '—',
 
-          // 👨‍⚕️ Doctor & Specialty (chưa có thì để placeholder)
-          doctor: 'Chưa chỉ định',
-          specialty: 'Chưa xác định',
+          // 👨‍⚕️ Doctor & Specialty - sẽ được cập nhật từ appointments
+          doctor: null,
+          specialty: null,
+          appointmentId: null,
         }));
 
         setPatients(mappedPatients);
         setLoading(false);
+
+        // Sau khi load patients, lấy thông tin doctor từ appointments
+        mappedPatients.forEach((patient) => {
+          fetchPatientDoctor(patient.id);
+        });
       })
       .catch((err) => {
         console.error(err);
@@ -62,13 +68,44 @@ const ManagePatients = () => {
       });
   }, []);
 
+  // Lấy thông tin doctor từ appointment gần nhất của patient
+  const fetchPatientDoctor = async (patientId) => {
+    try {
+      const res = await axios.get(
+        `http://localhost:8080/api/appointments?patientId=${patientId}&limit=1`
+      );
+
+      if (res.data.data && res.data.data.length > 0) {
+        const latestAppointment = res.data.data[0];
+        if (latestAppointment.doctor) {
+          setPatients((prev) =>
+            prev.map((p) => {
+              if (p.id === patientId) {
+                return {
+                  ...p,
+                  doctor: `BS. ${latestAppointment.doctor.user.firstName} ${latestAppointment.doctor.user.lastName}`,
+                  specialty: latestAppointment.doctor.specialization || 'Undetermined',
+                  appointmentId: latestAppointment.id,
+                  recentProcedure: latestAppointment.reason || p.recentProcedure,
+                };
+              }
+              return p;
+            })
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching patient doctor:', err);
+    }
+  };
+
   // Mock patient data
 
   // Filter patients based on search
   const filteredPatients = patients.filter((patient) =>
     [patient.name, patient.email, patient.phone]
       .filter(Boolean)
-      .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase()))
+      .some((field) => field.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   // Close dropdown when clicking outside
@@ -163,8 +200,12 @@ const ManagePatients = () => {
 
                       {/* Badge */}
                       <div className="flex-shrink-0">
-                        <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-medium">
-                          {patient.recentProcedure}
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          patient.recentProcedure && patient.recentProcedure !== '—'
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}>
+                          {patient.recentProcedure || '—'}
                         </span>
                       </div>
 
@@ -312,16 +353,20 @@ const ManagePatients = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-purple-50 text-purple-600 rounded-full text-xs font-medium">
-                        {patient.recentProcedure}
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        patient.recentProcedure && patient.recentProcedure !== '—'
+                          ? 'bg-purple-50 text-purple-600'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}>
+                        {patient.recentProcedure || '—'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">
-                        {patient.doctor}
+                      <div className={`font-medium ${patient.doctor ? 'text-gray-900' : 'text-gray-400'}`}>
+                        {patient.doctor || 'Not yet assigned'}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {patient.specialty}
+                      <div className={`text-sm ${patient.specialty ? 'text-gray-500' : 'text-gray-300'}`}>
+                        {patient.specialty || 'Undetermined'}
                       </div>
                     </td>
                     <td className="px-6 py-4">

@@ -17,6 +17,17 @@ import {
   useParams,
 } from 'react-router-dom';
 
+const API_SERVICE_CATEGORIES = 'http://localhost:8080/api/service-categories';
+const ASSETS_BASE_URL = 'http://localhost:8080';
+
+const normalizeImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return `${ASSETS_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const StepClinic = () => {
   const [data, setData] = useState([]);
   const [clinics, setClinics] = useState([]);
@@ -25,15 +36,9 @@ const StepClinic = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [specialty, setSpecialty] = useState(null);
   const [selectedClinic, setSelectedClinic] = useState(null);
+  const [categories, setCategories] = useState([]);
   const { selectedSpecialty } = useOutletContext();
   const { slug } = useParams();
-  const categories = [
-    { id: 'All ', name: 'Tất cả ', count: 12 },
-    { id: 'Medical facility', name: 'Cơ sở y tế ', count: 8 },
-    { id: 'Doctor', name: 'Bac Si', count: 6 },
-    { id: 'Specialty', name: 'Chuyen Khoa', count: 5 },
-    { id: 'Examination package', name: 'Gói khám ', count: 7 },
-  ];
   const availabilityOptions = [{ id: 'Doctor', label: 'Doctor' }];
   const [filters, setFilters] = useState({
     categories: [],
@@ -43,24 +48,36 @@ const StepClinic = () => {
     searchTerm: '',
   });
 
+  // Fetch service categories từ API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get(`${API_SERVICE_CATEGORIES}?isActive=true`);
+        const cats = res.data.data || [];
+        setCategories(cats);
+      } catch (err) {
+        console.error('Lỗi khi tải danh mục:', err);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const navigate = useNavigate();
   useEffect(() => {
     if (!slug) return;
     axios
-      .get(`http://localhost:8080/api/specialty/slug/${slug}`)
+      .get(`http://localhost:8080/api/specialties/slug/${slug}`)
 
       .then((res) => {
-        console.log('data from clinics: ', res.data);
         const info = res.data?.data || {};
         setSpecialty(info); // lưu thông tin chuyên khoa
         setClinics(info.clinics || []); // lưu list clinic
         setLoading(false);
       })
       .catch((err) => {
-        console.log("Can't loading data from clinics: ", err.message);
+        console.error("Can't loading data from clinics: ", err.message);
       });
   }, [slug]);
-  console.log('Selected clinic:', selectedClinic);
 
   const handleSelectClinic = () => {
     if (!selectedClinic) {
@@ -173,28 +190,32 @@ const StepClinic = () => {
         </div>
       </div>
 
-      {/* Danh mục chuyên khoa */}
+      {/* Danh mục chuyên khoa - Từ API */}
       <FilterSection title="Danh mục" section="category">
         <div className="space-y-2 max-h-64 overflow-y-auto">
-          {categories.map((category) => (
-            <label
-              key={category.id}
-              className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1 rounded"
-            >
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={filters.categories.includes(category.id)}
-                  onChange={() => handleCategoryChange(category.id)}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                />
-                <span className="ml-2 text-gray-700">{category.name}</span>
-              </div>
-              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                {category.count}
-              </span>
-            </label>
-          ))}
+          {categories.length === 0 ? (
+            <p className="text-gray-500 text-sm">Chưa có danh mục</p>
+          ) : (
+            categories.map((category) => (
+              <label
+                key={category.id}
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-1 rounded"
+              >
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={filters.categories.includes(category.id)}
+                    onChange={() => handleCategoryChange(category.id)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-gray-700">{category.name}</span>
+                </div>
+                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                  {category._count?.clinics || 0}
+                </span>
+              </label>
+            ))
+          )}
         </div>
       </FilterSection>
 
@@ -328,11 +349,16 @@ const StepClinic = () => {
                 >
                   <div className="flex items-start">
                     <div className="flex-shrink-0">
-                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <img
-                          src={clinic.images}
-                          className="w-6 h-6 text-blue-600"
-                        />
+                      <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center overflow-hidden">
+                        {clinic.logo ? (
+                          <img
+                            src={normalizeImageUrl(clinic.logo)}
+                            alt={clinic.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Building2 className="w-6 h-6 text-blue-600" />
+                        )}
                       </div>
                     </div>
                     <div className="ml-4 flex-1">

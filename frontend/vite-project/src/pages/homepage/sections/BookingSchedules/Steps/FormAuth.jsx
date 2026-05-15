@@ -1,6 +1,4 @@
-import React from 'react';
-
-import { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   User,
   Mail,
@@ -13,144 +11,63 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router';
 
-const FormAuth = () => {
-  const [mode, setMode] = useState('choose');
+const StepIndicator = ({ mode }) => (
+  <div className="flex items-center justify-center gap-2 mb-8 px-4">
+    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-sky-500 text-white">
+      <User size={20} />
+    </div>
+    <div className="flex-1 h-1 bg-sky-500 max-w-[100px] md:max-w-[150px]"></div>
+    <div
+      className={`flex items-center justify-center w-10 h-10 rounded-full ${mode === 'register' ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-500'}`}
+    >
+      <Users size={20} />
+    </div>
+    <div className="flex-1 h-1 bg-gray-200 max-w-[100px] md:max-w-[150px]"></div>
+    <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-gray-500">
+      <Calendar size={20} />
+    </div>
+  </div>
+);
+
+const ChooseScreen = ({ onChooseRegister, onChooseLogin }) => (
+  <div className="text-center py-8">
+    <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center">
+      <User size={48} className="text-sky-500" />
+    </div>
+    <p className="text-gray-600 mb-2">Bạn được phép tạo tối đa 10 hồ sơ</p>
+    <p className="text-gray-500 mb-8 text-sm">
+      (cá nhân và người thân trong gia đình)
+    </p>
+
+    <button
+      onClick={onChooseRegister}
+      className="w-full max-w-sm mx-auto bg-sky-500 hover:bg-sky-600 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 mb-6"
+    >
+      Chưa từng khám, đăng ký mới
+    </button>
+
+    <div className="flex items-center gap-4 max-w-sm mx-auto mb-4">
+      <div className="flex-1 border-t border-dashed border-gray-300"></div>
+      <span className="text-gray-500 text-sm">Hoặc</span>
+      <div className="flex-1 border-t border-dashed border-gray-300"></div>
+    </div>
+
+    <button
+      onClick={onChooseLogin}
+      className="text-sky-500 hover:text-sky-600 font-medium transition-colors"
+    >
+      Đăng nhập để lấy danh sách hồ sơ của bạn
+    </button>
+  </div>
+);
+
+const LoginForm = ({ formData, handleChange, onBack, onLogin }) => {
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    password: '',
-    phone: '',
-    gender: '',
-    dateOfBirth: '',
-    streetAddress: '',
-    city: '',
-    state: '',
-    postalCode: '',
-    roleId: 3,
-    roleName: 'Patient',
-  });
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      const res = await fetch('http://localhost:8080/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-      console.log('data from register', data);
-      if (!res.ok || !data.success) {
-        alert(data.message || 'Đăng ký thất bại');
-        return;
-      }
-
-      alert('Đăng ký thành công! Vui lòng đăng nhập');
-      setMode('login'); // 👉 quay về màn login
-    } catch (err) {
-      console.error(err);
-      alert('Không thể kết nối server');
-    }
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
-
-    try {
-      const res = await fetch('http://localhost:8080/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok || !data.success) {
-        alert(data.message || 'Đăng nhập thất bại');
-        return;
-      }
-
-      // ✅ Lưu token
-      sessionStorage.setItem('token', data.data.token);
-
-      // 👉 Điều hướng tiếp (tuỳ flow của bạn)
-      // ví dụ: chuyển sang trang chọn lịch
-      window.location.href = '/';
-    } catch (err) {
-      console.error(err);
-      alert('Không thể kết nối server');
-    }
-  };
-
-  const StepIndicator = () => (
-    <div className="flex items-center justify-center gap-2 mb-8 px-4">
-      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-sky-500 text-white">
-        <User size={20} />
-      </div>
-      <div className="flex-1 h-1 bg-sky-500 max-w-[100px] md:max-w-[150px]"></div>
-      <div
-        className={`flex items-center justify-center w-10 h-10 rounded-full ${mode === 'register' ? 'bg-sky-500 text-white' : 'bg-gray-200 text-gray-500'}`}
-      >
-        <Users size={20} />
-      </div>
-      <div className="flex-1 h-1 bg-gray-200 max-w-[100px] md:max-w-[150px]"></div>
-      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-200 text-gray-500">
-        <Calendar size={20} />
-      </div>
-    </div>
-  );
-
-  const ChooseScreen = () => (
-    <div className="text-center py-8">
-      <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-sky-100 to-sky-50 rounded-2xl flex items-center justify-center">
-        <User size={48} className="text-sky-500" />
-      </div>
-      <p className="text-gray-600 mb-2">Bạn được phép tạo tối đa 10 hồ sơ</p>
-      <p className="text-gray-500 mb-8 text-sm">
-        (cá nhân và người thân trong gia đình)
-      </p>
-
-      <button
-        onClick={() => setMode('register')}
-        className="w-full max-w-sm mx-auto bg-sky-500 hover:bg-sky-600 text-white py-3 px-6 rounded-lg font-medium transition-all duration-200 mb-6"
-      >
-        Chưa từng khám, đăng ký mới
-      </button>
-
-      <div className="flex items-center gap-4 max-w-sm mx-auto mb-4">
-        <div className="flex-1 border-t border-dashed border-gray-300"></div>
-        <span className="text-gray-500 text-sm">Hoặc</span>
-        <div className="flex-1 border-t border-dashed border-gray-300"></div>
-      </div>
-
-      <button
-        onClick={() => setMode('login')}
-        className="text-sky-500 hover:text-sky-600 font-medium transition-colors"
-      >
-        Đăng nhập để lấy danh sách hồ sơ của bạn
-      </button>
-    </div>
-  );
-
-  const LoginForm = () => (
-    <form onSubmit={handleLogin} className="space-y-6 py-4">
+  return (
+    <form onSubmit={onLogin} className="space-y-6 py-4">
       <h3 className="text-xl font-semibold text-center text-gray-800 mb-6">
         Đăng nhập
       </h3>
@@ -207,7 +124,7 @@ const FormAuth = () => {
       <div className="flex gap-4 pt-4">
         <button
           type="button"
-          onClick={() => setMode('choose')}
+          onClick={onBack}
           className="flex-1 py-3 px-6 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-all"
         >
           Quay lại
@@ -221,9 +138,13 @@ const FormAuth = () => {
       </div>
     </form>
   );
+};
 
-  const RegisterForm = () => (
-    <form onSubmit={handleSubmit} className="py-4">
+const RegisterForm = ({ formData, handleChange, onBack, onRegister }) => {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <form onSubmit={onRegister} className="py-4">
       <h3 className="text-xl font-semibold text-center text-gray-800 mb-6">
         Đăng ký tài khoản mới
       </h3>
@@ -443,7 +364,7 @@ const FormAuth = () => {
       <div className="flex gap-4 pt-6">
         <button
           type="button"
-          onClick={() => setMode('choose')}
+          onClick={onBack}
           className="flex-1 py-3 px-6 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition-all"
         >
           Quay lại
@@ -457,6 +378,105 @@ const FormAuth = () => {
       </div>
     </form>
   );
+};
+
+const FormAuth = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isRegisterPage = location.pathname === '/register';
+
+  // Check if user is already logged in
+  const token = sessionStorage.getItem('token');
+
+  const [mode, setMode] = useState(isRegisterPage ? 'register' : 'choose');
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    phone: '',
+    gender: '',
+    dateOfBirth: '',
+    streetAddress: '',
+    city: '',
+    state: '',
+    postalCode: '',
+    roleId: 3,
+    roleName: 'Patient',
+  });
+
+  // If already logged in, skip to payment step
+  useEffect(() => {
+    if (token) {
+      navigate('/booking/formData/payments', { replace: true });
+    }
+  }, [token, navigate]);
+
+  const handleChange = useCallback((e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await fetch('http://localhost:8080/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await res.json();
+      console.log('data from register', data);
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Đăng ký thất bại');
+        return;
+      }
+
+      alert('Đăng ký thành công! Vui lòng đăng nhập');
+      setMode('login');
+    } catch (err) {
+      console.error(err);
+      alert('Không thể kết nối server');
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
+    try {
+      const res = await fetch('http://localhost:8080/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        alert(data.message || 'Đăng nhập thất bại');
+        return;
+      }
+
+      sessionStorage.setItem('token', data.data.token);
+      sessionStorage.setItem('user', JSON.stringify(data.data.user));
+      sessionStorage.setItem('userType', data.data.user.role.name);
+
+      window.dispatchEvent(new Event('userLogin'));
+      navigate('/booking/formData/payments');
+    } catch (err) {
+      console.error(err);
+      alert('Không thể kết nối server');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -486,12 +506,31 @@ const FormAuth = () => {
               Chọn hồ sơ
             </h1>
 
-            <StepIndicator />
+            <StepIndicator mode={mode} />
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8">
-              {mode === 'choose' && <ChooseScreen />}
-              {mode === 'login' && <LoginForm />}
-              {mode === 'register' && <RegisterForm />}
+              {mode === 'choose' && (
+                <ChooseScreen
+                  onChooseRegister={() => setMode('register')}
+                  onChooseLogin={() => setMode('login')}
+                />
+              )}
+              {mode === 'login' && (
+                <LoginForm
+                  formData={formData}
+                  handleChange={handleChange}
+                  onBack={() => setMode('choose')}
+                  onLogin={handleLogin}
+                />
+              )}
+              {mode === 'register' && (
+                <RegisterForm
+                  formData={formData}
+                  handleChange={handleChange}
+                  onBack={() => setMode('choose')}
+                  onRegister={handleRegister}
+                />
+              )}
             </div>
           </div>
         </main>

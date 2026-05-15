@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
-import TableContent from '../table/TableContent';
+import { Search, Filter, Download, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function ManageDoctor() {
+  const { t } = useTranslation();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+  });
 
   const navigate = useNavigate();
 
@@ -27,72 +36,293 @@ function ManageDoctor() {
     console.log('Deleteing doctor: ', user);
   };
 
-  useEffect(() => {
-    axios
-      .get(`http://localhost:8080/api/doctors`)
-      .then((res) => {
-        console.log('RAW response:', res.data);
-        console.log('ITEM 0:', res.data.data.items[0]);
-        console.log('ITEM 0 user:', res.data.data.items[0]?.user);
-        console.log('DATA:', res.data.data);
-        console.log('Bio:', res.data.data?.bio);
-        // console.log('data from manage doctor', res.data);
-        // console.log('Full response:', res.data);
-        // console.log('Type of data:', typeof res.data.data);
-        // console.log('Is array?', Array.isArray(res.data.data));
-        // console.log('Has items?', res.data.data?.items);
+  const fetchDoctors = (page = 1, search = '') => {
+    const token = sessionStorage.getItem('token');
+    setLoading(true);
 
-        const transformedData = res.data.data.items.map((doctor) => ({
-          id: doctor.id,
+    axios
+      .get('http://localhost:8080/api/users/doctors', {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { page, limit: pagination.limit, search },
+      })
+      .then((res) => {
+        const transformedData = res.data.data.map((doctor) => ({
+          id: doctor.user?.id,
           firstName: doctor.user?.firstName,
           lastName: doctor.user?.lastName,
           email: doctor.user?.email,
           gender: doctor.user?.gender,
-          phoneNumber: doctor.user?.phone,
+          phone: doctor.user?.phone,
           streetAddress: doctor.user?.streetAddress,
           city: doctor.user?.city,
           state: doctor.user?.state,
           postalCode: doctor.user?.postalCode,
           role: doctor.user?.role?.name,
-          department: doctor.department?.name,
           specialization: doctor.specialization,
+          status: doctor.user?.status,
         }));
+
         setData(transformedData);
+        setPagination({
+          ...pagination,
+          page: res.data.pagination.page,
+          total: res.data.pagination.total,
+          totalPages: res.data.pagination.totalPages,
+        });
         setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
+        setError(err.response?.data?.message || err.message);
         setLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchDoctors(pagination.page, searchTerm);
   }, []);
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchDoctors(1, searchTerm);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      fetchDoctors(newPage, searchTerm);
+    }
+  };
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+    </div>
+  );
+  
+  if (error) return (
+    <div className="p-6 bg-red-50 border border-red-200 rounded-lg">
+      <p className="text-red-600">Error: {error}</p>
+    </div>
+  );
+
+  const getPageNumbers = () => {
+    const pages = [];
+    const { page, totalPages } = pagination;
+    
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (page <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (page >= totalPages - 3) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = page - 1; i <= page + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
   return (
-    <>
-      <TableContent
-        title="Doctors Management"
-        columns={[
-          'ID',
-          'First Name',
-          'Last Name',
-          'Email',
-          'Gender',
-          'Phone Number',
-          'Street Address',
-          'City',
-          'State',
-          'Postal-Code',
-          'Role',
-          'specialization',
-          'department',
-        ]}
-        data={data}
-        onView={handleView}
-        onAddUser={handleAdd}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
-    </>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+      <div className="p-4 lg:p-6 border-b border-gray-100">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+          <h3 className="text-base lg:text-lg font-bold text-gray-900">
+            {t('doctors.title')} ({pagination.total} total)
+          </h3>
+          <button
+            onClick={handleAdd}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-blue-700 transition-colors text-sm cursor-pointer"
+          >
+            <Plus size={18} />
+            {t('doctors.addDoctor')}
+          </button>
+        </div>
+        
+        <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-3 lg:gap-4">
+          <div className="flex-1 relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder={t('common.search')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+            />
+          </div>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+          >
+            {t('common.search')}
+          </button>
+          <button
+            type="button"
+            onClick={() => { setSearchTerm(''); fetchDoctors(1, ''); }}
+            className="px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+          >
+            {t('common.clear')}
+          </button>
+        </form>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                ID
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('users.firstName')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('users.lastName')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('common.email')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('users.gender')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('users.phone')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('users.city')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('doctors.specialty')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                {t('common.status')}
+              </th>
+              <th className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                {t('common.action')}
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {data.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="px-4 py-8 text-center text-gray-500">
+                  {t('common.noData')}
+                </td>
+              </tr>
+            ) : (
+              data.map((row) => (
+                <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.id}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.firstName}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.lastName}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.email}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.gender}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.phone}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.city}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-700">
+                    {row.specialization}
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      row.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {row.status}
+                    </span>
+                  </td>
+                  <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-xs lg:text-sm">
+                    <button
+                      onClick={() => handleView(row)}
+                      className="text-blue-600 hover:text-blue-800 mr-2 lg:mr-3 cursor-pointer"
+                    >
+                      {t('common.view')}
+                    </button>
+                    <button
+                      onClick={() => handleEdit(row)}
+                      className="text-green-600 hover:text-green-800 mr-2 lg:mr-3 cursor-pointer"
+                    >
+                      {t('common.edit')}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(row)}
+                      className="text-red-600 hover:text-red-800 cursor-pointer"
+                    >
+                      {t('common.delete')}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200">
+          <div className="text-sm text-gray-500">
+            Showing {(pagination.page - 1) * pagination.limit + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+            {pagination.total} results
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            {getPageNumbers().map((pageNum, idx) => (
+              <button
+                key={idx}
+                onClick={() => pageNum !== '...' && handlePageChange(pageNum)}
+                className={`w-10 h-10 rounded-lg transition-colors ${
+                  pageNum === pagination.page
+                    ? 'bg-blue-600 text-white'
+                    : pageNum === '...'
+                    ? 'cursor-default'
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+                disabled={pageNum === '...'}
+              >
+                {pageNum}
+              </button>
+            ))}
+            <button
+              onClick={() => handlePageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.totalPages}
+              className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

@@ -1,7 +1,9 @@
-import React from 'react';
-import { useEffect, useState } from 'react';
-import axios from 'axios';
-import { toast } from 'react-hot-toast';
+/** @format */
+
+import React from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { toast } from "react-hot-toast";
 
 export default function TabSpecialty({ selectedClinic, setActiveTab }) {
   const [allSpecialties, setAllSpecialties] = useState([]);
@@ -16,9 +18,9 @@ export default function TabSpecialty({ selectedClinic, setActiveTab }) {
       try {
         setLoading(true);
         const [allRes, assignedRes] = await Promise.all([
-          axios.get('http://localhost:8080/api/specialty'),
+          axios.get("http://localhost:8080/api/specialties"),
           axios.get(
-            `http://localhost:8080/api/clinics/${selectedClinic.id}/specialties`
+            `http://localhost:8080/api/clinics/${selectedClinic.id}/specialties`,
           ),
         ]);
 
@@ -28,7 +30,7 @@ export default function TabSpecialty({ selectedClinic, setActiveTab }) {
         // Những specialty thuộc clinic
         setSelectedIds((assignedRes.data?.data || []).map((s) => s.id));
       } catch (err) {
-        console.error('Lỗi load chuyên khoa:', err);
+        console.error("Specialist loading error:", err);
       } finally {
         setLoading(false);
       }
@@ -40,7 +42,7 @@ export default function TabSpecialty({ selectedClinic, setActiveTab }) {
   // Toggle chọn
   const toggleSpecialty = (id) => {
     setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -51,15 +53,17 @@ export default function TabSpecialty({ selectedClinic, setActiveTab }) {
       setSaving(true);
       await axios.post(
         `http://localhost:8080/api/clinics/${selectedClinic.id}/specialties`,
-        { specialtyIds: selectedIds }
+        { specialtyIds: selectedIds },
       );
 
-      toast.success('Đã lưu chuyên khoa. Tiếp tục chọn bác sĩ 👉');
+      toast.success(
+        "Specialist saved successfully. Continue to select doctor 👉",
+      );
 
       // Chuyển sang tab doctor
-      setActiveTab('doctor');
+      setActiveTab("doctor");
     } catch (err) {
-      toast.error('Lưu thất bại!');
+      toast.error("Save failed!");
       console.error(err);
     } finally {
       setSaving(false);
@@ -75,12 +79,12 @@ export default function TabSpecialty({ selectedClinic, setActiveTab }) {
 
       await axios.post(
         `http://localhost:8080/api/clinics/${selectedClinic.id}/specialties`,
-        { specialtyIds: selectedIds }
+        { specialtyIds: selectedIds },
       );
 
-      toast.success('Lưu danh sách chuyên khoa thành công 🎉');
+      toast.success("Save specialist list successfully 🎉");
     } catch (err) {
-      toast.error('Lưu thất bại');
+      toast.error("Save failed!");
       console.error(err);
     } finally {
       setSaving(false);
@@ -89,11 +93,11 @@ export default function TabSpecialty({ selectedClinic, setActiveTab }) {
   return (
     <div className="p-4 space-y-4">
       <h3 className="font-semibold text-lg">
-        Chuyên khoa của phòng khám: {selectedClinic?.name}
+        Specialist of clinic: {selectedClinic?.name}
       </h3>
 
       {loading ? (
-        <p>Đang tải dữ liệu...</p>
+        <p>Loading data...</p>
       ) : (
         <div className="grid grid-cols-2 gap-2">
           {allSpecialties.map((s) => (
@@ -117,14 +121,14 @@ export default function TabSpecialty({ selectedClinic, setActiveTab }) {
         disabled={saving}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
-        {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
+        {saving ? "Saving..." : "Save changes"}
       </button>
 
       <button
         onClick={handleNext}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
-        Tiep Tuc
+        Continue
       </button>
     </div>
   );

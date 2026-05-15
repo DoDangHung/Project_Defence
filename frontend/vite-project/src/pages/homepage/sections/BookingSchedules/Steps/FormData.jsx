@@ -1,65 +1,92 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Calendar, Clock, User, Phone, Mail, FileText } from 'lucide-react';
+/** @format */
+
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { Calendar, Clock, User, Phone, Mail, FileText } from "lucide-react";
 
 const FormData = () => {
   const [bookingInfo, setBookingInfo] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [formData, setFormData] = useState({
-    fullName: '',
-    phoneNumber: '',
-    email: '',
-    reason: '',
+    fullName: "",
+    phoneNumber: "",
+    email: "",
+    reason: "",
   });
   const [errors, setErrors] = useState({});
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Lấy booking data từ localStorage
-    const bookingString = localStorage.getItem('booking');
+    const loadBooking = () => {
+      const userStr =
+        sessionStorage.getItem("user") || localStorage.getItem("user");
+      if (!userStr) {
+        navigate("/login");
+        return;
+      }
 
-    if (!bookingString) {
-      alert('Không tìm thấy thông tin đặt lịch. Vui lòng chọn lại.');
-      navigate(-1);
-      return;
-    }
+      try {
+        const user = JSON.parse(userStr);
+        setUserData(user);
 
-    const booking = JSON.parse(bookingString);
-    setBookingInfo(booking);
+        const bookingString = localStorage.getItem("booking");
+        if (!bookingString) {
+          navigate("/");
+          return;
+        }
 
-    console.log('Booking info:', booking);
+        const booking = JSON.parse(bookingString);
+        setBookingInfo(booking);
+
+        setFormData((prev) => ({
+          ...prev,
+          fullName:
+            user.firstName && user.lastName
+              ? `${user.firstName} ${user.lastName}`
+              : prev.fullName,
+          phoneNumber: user.phone || prev.phoneNumber,
+          email: user.email || prev.email,
+        }));
+
+        console.log("Booking info:", booking);
+      } catch (e) {
+        console.error("Error loading booking:", e);
+      }
+    };
+
+    loadBooking();
   }, [navigate]);
 
-  const handleChange = (e) => {
+  const handleChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
 
-    // Xóa lỗi khi user nhập
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: '',
-      }));
-    }
-  };
+    setErrors((prev) => {
+      if (prev[name]) {
+        return { ...prev, [name]: "" };
+      }
+      return prev;
+    });
+  }, []);
 
   const validateForm = () => {
     const newErrors = {};
 
     if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Vui lòng nhập họ tên';
+      newErrors.fullName = "Vui lòng nhập họ tên";
     }
 
     if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = 'Vui lòng nhập số điện thoại';
-    } else if (!/^[0-9]{10,11}$/.test(formData.phoneNumber.trim())) {
-      newErrors.phoneNumber = 'Số điện thoại không hợp lệ (10-11 số)';
+      newErrors.phoneNumber = "Vui lòng nhập số điện thoại";
+    } else if (!/^[0-9]{9,11}$/.test(formData.phoneNumber.trim())) {
+      newErrors.phoneNumber = "Số điện thoại không hợp lệ (09-11 số)";
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Email không hợp lệ';
+      newErrors.email = "Email không hợp lệ";
     }
 
     setErrors(newErrors);
@@ -73,7 +100,7 @@ const FormData = () => {
       return;
     }
 
-    const existingBooking = JSON.parse(localStorage.getItem('booking') || '{}');
+    const existingBooking = JSON.parse(localStorage.getItem("booking") || "{}");
 
     // ✅ Cập nhật booking với thông tin patient
     const updatedBooking = {
@@ -85,29 +112,29 @@ const FormData = () => {
     };
 
     // ✅ Lưu lại booking đầy đủ
-    localStorage.setItem('booking', JSON.stringify(updatedBooking));
+    localStorage.setItem("booking", JSON.stringify(updatedBooking));
 
     // ✅ Cũng lưu patientInfo riêng nếu cần
-    localStorage.setItem('patientInfo', JSON.stringify(formData));
+    localStorage.setItem("patientInfo", JSON.stringify(formData));
 
-    console.log('✅ Updated booking:', updatedBooking);
+    console.log("✅ Updated booking:", updatedBooking);
 
-    navigate('/booking/formData/payments');
+    navigate("/booking/formData/payments");
   };
 
   const formatDate = (isoString) => {
-    return new Date(isoString).toLocaleDateString('vi-VN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Date(isoString).toLocaleDateString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   const formatTime = (isoString) => {
-    return new Date(isoString).toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(isoString).toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
       hour12: false,
     });
   };
@@ -174,8 +201,8 @@ const FormData = () => {
               onChange={handleChange}
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                 errors.fullName
-                  ? 'border-red-300 focus:border-red-500'
-                  : 'border-gray-200 focus:border-blue-500'
+                  ? "border-red-300 focus:border-red-500"
+                  : "border-gray-200 focus:border-blue-500"
               }`}
               placeholder="Nguyễn Văn A"
             />
@@ -197,8 +224,8 @@ const FormData = () => {
               onChange={handleChange}
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                 errors.phoneNumber
-                  ? 'border-red-300 focus:border-red-500'
-                  : 'border-gray-200 focus:border-blue-500'
+                  ? "border-red-300 focus:border-red-500"
+                  : "border-gray-200 focus:border-blue-500"
               }`}
               placeholder="0123456789"
             />
@@ -211,7 +238,7 @@ const FormData = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <Mail className="inline w-4 h-4 mr-1" />
-              Email{' '}
+              Email{" "}
               <span className="text-gray-400 text-xs">(không bắt buộc)</span>
             </label>
             <input
@@ -221,8 +248,8 @@ const FormData = () => {
               onChange={handleChange}
               className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none transition-colors ${
                 errors.email
-                  ? 'border-red-300 focus:border-red-500'
-                  : 'border-gray-200 focus:border-blue-500'
+                  ? "border-red-300 focus:border-red-500"
+                  : "border-gray-200 focus:border-blue-500"
               }`}
               placeholder="example@gmail.com"
             />
@@ -235,7 +262,7 @@ const FormData = () => {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               <FileText className="inline w-4 h-4 mr-1" />
-              Lý do khám{' '}
+              Lý do khám{" "}
               <span className="text-gray-400 text-xs">(không bắt buộc)</span>
             </label>
             <textarea

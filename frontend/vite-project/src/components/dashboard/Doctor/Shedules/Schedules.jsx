@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+/** @format */
+
+import React, { useEffect, useState } from "react";
 import {
   Calendar,
   Clock,
@@ -6,108 +8,136 @@ import {
   AlertCircle,
   CheckCircle,
   Trash2,
-  House,
-} from 'lucide-react';
-import axios from 'axios';
-import { useParams } from 'react-router';
+  Building2,
+} from "lucide-react";
+import axios from "axios";
 
 export default function CreateSchedule() {
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0],
+    new Date().toISOString().split("T")[0],
   );
   const [selectedSlots, setSelectedSlots] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [message, setMessage] = useState({ type: "", text: "" });
   const [createdSchedules, setCreatedSchedules] = useState([]);
-  const [rooms, setRooms] = useState([]);
-  const [selectedRoomId, setSelectedRoomId] = useState('');
-  // Load schedules từ localStorage khi component mount
-  React.useEffect(() => {
-    loadSchedulesFromStorage();
-  }, []);
-  // Lưu schedules vào localStorage mỗi khi có thay đổi
-  React.useEffect(() => {
-    if (createdSchedules.length > 0) {
-      saveSchedulesToStorage(createdSchedules);
-    }
-  }, [createdSchedules]);
+  const [clinics, setClinics] = useState([]);
+  const [selectedClinicId, setSelectedClinicId] = useState("");
+  const [selectedRoomId, setSelectedRoomId] = useState("");
+  const [doctorId, setDoctorId] = useState(null);
 
   useEffect(() => {
-    const fetchRooms = async () => {
-      const token = sessionStorage.getItem('token');
-
-      const res = await fetch('http://localhost:8080/api/rooms', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      console.log('data from room', res.data);
-      const data = await res.json();
-      if (data.success) {
-        setRooms(data.data);
-      }
-    };
-
-    fetchRooms();
+    fetchDoctorData();
   }, []);
 
-  // Load và filter schedules từ localStorage
-  const loadSchedulesFromStorage = () => {
+  const fetchDoctorData = async () => {
+    const token = sessionStorage.getItem("token");
+    const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
+
+    if (!userData.doctor?.id) {
+      setMessage({ type: "error", text: "Khong tim thay thong tin bac si" });
+      return;
+    }
+
+    setDoctorId(userData.doctor.id);
+
     try {
-      const stored = localStorage.getItem('doctorSchedules');
-      if (stored) {
-        const schedules = JSON.parse(stored);
-        // Filter chỉ lấy lịch chưa qua (endTime > now)
-        const upcomingSchedules = schedules.filter((schedule) => {
-          const endDateTime = new Date(`${schedule.date}T${schedule.endTime}`);
-          return endDateTime > new Date();
-        });
+      const assignmentsRes = await axios.get(
+        `http://localhost:8080/api/doctor-clinic/assignments/${userData.doctor.id}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setClinics(assignmentsRes.data.data || []);
+    } catch (error) {
+      console.error("Error fetching doctor data:", error);
+    }
+  };
 
-        // Cập nhật lại localStorage với lịch còn hiệu lực
-        if (upcomingSchedules.length !== schedules.length) {
-          saveSchedulesToStorage(upcomingSchedules);
-        }
+  useEffect(() => {
+    if (doctorId) {
+      loadSchedulesFromServer();
+    }
+  }, [doctorId]);
 
-        setCreatedSchedules(upcomingSchedules);
+  const loadSchedulesFromServer = async () => {
+    try {
+      const token = sessionStorage.getItem("token");
+      const res = await axios.get(
+        `http://localhost:8080/api/schedules/doctor/${doctorId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (res.data.success) {
+        setCreatedSchedules(res.data.data || []);
       }
     } catch (error) {
-      console.error('Error loading schedules from localStorage:', error);
+      console.error("Error loading schedules:", error);
     }
   };
 
-  // Lưu schedules vào localStorage
-  const saveSchedulesToStorage = (schedules) => {
+  const deleteSchedule = async (id) => {
+    if (!confirm("Ban co chac muon xoa lich nay?")) return;
+
     try {
-      localStorage.setItem('doctorSchedules', JSON.stringify(schedules));
+      const token = sessionStorage.getItem("token");
+      await axios.delete(`http://localhost:8080/api/schedules/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      loadSchedulesFromServer();
+      setMessage({ type: "success", text: "Da xoa lich lam viec!" });
+      setTimeout(() => setMessage({ type: "", text: "" }), 2000);
     } catch (error) {
-      console.error('Error saving schedules to localStorage:', error);
+      setMessage({ type: "error", text: "Khong the xoa lich!" });
     }
   };
 
-  // Xóa một schedule khỏi localStorage
-  const deleteSchedule = (index) => {
-    const newSchedules = createdSchedules.filter((_, i) => i !== index);
-    setCreatedSchedules(newSchedules);
-    saveSchedulesToStorage(newSchedules);
-    setMessage({ type: 'success', text: 'Đã xóa lịch làm việc!' });
-    setTimeout(() => setMessage({ type: '', text: '' }), 2000);
-  };
-
-  // Tạo danh sách giờ từ 8:00 đến 17:00 (30 phút/slot)
   const generateTimeSlots = () => {
     const slots = [];
     for (let hour = 8; hour < 17; hour++) {
-      slots.push(`${hour.toString().padStart(2, '0')}:00`);
-      slots.push(`${hour.toString().padStart(2, '0')}:30`);
+      slots.push(`${hour.toString().padStart(2, "0")}:00`);
+      slots.push(`${hour.toString().padStart(2, "0")}:30`);
     }
-    slots.push('17:00');
+    slots.push("17:00");
     return slots;
   };
 
   const timeSlots = generateTimeSlots();
 
+  // Lay cac khung gio da ban trong ngay (tru cac phong kham khac)
+  const getUnavailableSlots = () => {
+    const unavailable = new Set();
+
+    createdSchedules.forEach((schedule) => {
+      // Neu lich nay thuoc phong kham dang chon, bo qua
+      if (schedule.clinicId === parseInt(selectedClinicId)) return;
+
+      const scheduleDate = new Date(schedule.date).toISOString().split("T")[0];
+      if (scheduleDate !== selectedDate) return;
+
+      const startHour = new Date(schedule.startTime).getHours();
+      const startMin = new Date(schedule.startTime).getMinutes();
+      const endHour = new Date(schedule.endTime).getHours();
+      const endMin = new Date(schedule.endTime).getMinutes();
+
+      timeSlots.forEach((slot) => {
+        const [slotHour, slotMin] = slot.split(":").map(Number);
+        const slotTime = slotHour * 60 + slotMin;
+        const startTime = startHour * 60 + startMin;
+        const endTime = endHour * 60 + endMin;
+
+        if (slotTime >= startTime && slotTime <= endTime) {
+          unavailable.add(slot);
+        }
+      });
+    });
+
+    return unavailable;
+  };
+
+  const unavailableSlots = getUnavailableSlots();
+
   const handleSlotClick = (time) => {
-    setMessage({ type: '', text: '' });
+    // Khong cho chon khung gio da ban
+    if (unavailableSlots.has(time)) return;
+
+    setMessage({ type: "", text: "" });
     if (selectedSlots.includes(time)) {
       setSelectedSlots(selectedSlots.filter((slot) => slot !== time));
     } else {
@@ -117,34 +147,32 @@ export default function CreateSchedule() {
 
   const handleClearSelection = () => {
     setSelectedSlots([]);
-    setMessage({ type: '', text: '' });
+    setMessage({ type: "", text: "" });
   };
 
   const validateSelection = () => {
     if (selectedSlots.length === 0) {
       setMessage({
-        type: 'error',
-        text: 'Vui lòng chọn ít nhất một khung giờ!',
+        type: "error",
+        text: "Please select at least one time slot!",
       });
       return false;
     }
-
     if (selectedSlots.length < 2) {
       setMessage({
-        type: 'error',
-        text: 'Vui lòng chọn ít nhất 2 khung giờ (giờ bắt đầu và kết thúc)!',
+        type: "error",
+        text: "Please select at least two time slots!",
       });
       return false;
     }
-
-    const now = new Date();
-    const selectedDateTime = new Date(`${selectedDate}T${selectedSlots[0]}`);
-
-    if (selectedDateTime < now) {
-      setMessage({ type: 'error', text: 'Không thể tạo lịch trong quá khứ!' });
+    if (!selectedClinicId) {
+      setMessage({ type: "error", text: "Please select a clinic!" });
       return false;
     }
-
+    if (!selectedRoomId) {
+      setMessage({ type: "error", text: "Please select a work room!" });
+      return false;
+    }
     return true;
   };
 
@@ -152,73 +180,49 @@ export default function CreateSchedule() {
     if (!validateSelection()) return;
 
     setLoading(true);
-    setMessage({ type: '', text: '' });
+    setMessage({ type: "", text: "" });
 
     try {
-      const token = sessionStorage.getItem('token');
-
-      // Lấy giờ đầu tiên và cuối cùng
+      const token = sessionStorage.getItem("token");
       const startTime = selectedSlots[0];
       const endTime = selectedSlots[selectedSlots.length - 1];
-      console.log(new Date(startTime));
 
-      const dateISO = new Date(selectedDate).toISOString();
       const startTimeISO = new Date(
         `${selectedDate}T${startTime}`,
       ).toISOString();
       const endTimeISO = new Date(`${selectedDate}T${endTime}`).toISOString();
 
-      const response = await fetch(
-        'http://localhost:8080/api/doctor/schedules',
+      const response = await axios.post(
+        "http://localhost:8080/api/schedules",
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            date: dateISO,
-            roomId: Number(selectedRoomId),
-            startTime: startTimeISO,
-            endTime: endTimeISO,
-          }),
+          doctorId,
+          clinicId: selectedClinicId,
+          roomId: selectedRoomId,
+          date: selectedDate,
+          startTime: startTimeISO,
+          endTime: endTimeISO,
         },
+        { headers: { Authorization: `Bearer ${token}` } },
       );
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        setMessage({ type: 'success', text: 'Tạo lịch làm việc thành công!' });
-
-        // Tạo object schedule mới
-        const newSchedule = {
-          id: data.data?.id || Date.now(), // Dùng id từ API hoặc timestamp
-          date: selectedDate,
-          startTime,
-          endTime,
-          slots: selectedSlots.length,
-          createdAt: new Date().toISOString(),
-        };
-
-        // Cập nhật state và localStorage
-        const updatedSchedules = [newSchedule, ...createdSchedules];
-        setCreatedSchedules(updatedSchedules);
-        saveSchedulesToStorage(updatedSchedules);
-
+      if (response.data.success) {
+        setMessage({ type: "success", text: "Create schedule successfully!" });
+        loadSchedulesFromServer();
         setSelectedSlots([]);
-
-        setTimeout(() => {
-          setMessage({ type: '', text: '' });
-        }, 3000);
+        setSelectedClinicId("");
+        setSelectedRoomId("");
+        setTimeout(() => setMessage({ type: "", text: "" }), 3000);
       } else {
         setMessage({
-          type: 'error',
-          text: data.message || 'Tạo lịch thất bại!',
+          type: "error",
+          text: response.data.message || "Create schedule failed!",
         });
       }
     } catch (err) {
-      setMessage({ type: 'error', text: 'Không thể kết nối đến server!' });
-      console.error('Error:', err);
+      setMessage({
+        type: "error",
+        text: err.response?.data?.message || "Cannot connect to the server!",
+      });
     } finally {
       setLoading(false);
     }
@@ -226,35 +230,45 @@ export default function CreateSchedule() {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('vi-VN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return date.toLocaleDateString("vi-VN", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const selectedClinic = clinics.find(
+    (c) => c.clinic?.id === parseInt(selectedClinicId),
+  );
+  const rooms = selectedClinic?.room ? [selectedClinic.room] : [];
+
+  // Chi hien thi phong kham co lich trong ngay (de nguoi dung biet phong kham nao da co lich)
+  const getClinicScheduleInfo = (clinicId) => {
+    return createdSchedules.filter((s) => {
+      const scheduleDate = new Date(s.date).toISOString().split("T")[0];
+      return s.clinicId === clinicId && scheduleDate === selectedDate;
     });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Tạo lịch làm việc
+            Create schedule
           </h1>
           <p className="text-gray-600">
-            Chọn ngày và các khung giờ bạn muốn làm việc
+            Choose the days and time slots you want to work.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Schedule Selector */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl shadow-xl p-6">
-              {/* Date Selector */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Chọn ngày làm việc
+                  Choose the days you want to work
                 </label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -264,112 +278,185 @@ export default function CreateSchedule() {
                     onChange={(e) => {
                       setSelectedDate(e.target.value);
                       setSelectedSlots([]);
-                      setMessage({ type: '', text: '' });
+                      setMessage({ type: "", text: "" });
                     }}
-                    min={new Date().toISOString().split('T')[0]}
+                    min={new Date().toISOString().split("T")[0]}
                     className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg font-medium"
                   />
                 </div>
               </div>
+
+              {/* Hien thi lich cac phong kham khac */}
+              {selectedDate && (
+                <div className="mb-6 p-4 bg-amber-50 rounded-xl border border-amber-200">
+                  <p className="text-sm font-medium text-amber-800 mb-2">
+                    Schedules in other clinics on the same day:
+                  </p>
+                  <div className="space-y-2">
+                    {clinics
+                      .filter(
+                        (c) => c.clinic?.id !== parseInt(selectedClinicId),
+                      )
+                      .map((c) => {
+                        const clinicSchedules = getClinicScheduleInfo(
+                          c.clinic?.id,
+                        );
+                        if (clinicSchedules.length === 0) return null;
+                        return (
+                          <div key={c.clinic?.id} className="text-sm">
+                            <span className="font-medium text-amber-900">
+                              {c.clinic?.name}:
+                            </span>
+                            <span className="text-amber-700 ml-2">
+                              {clinicSchedules
+                                .map(
+                                  (s) =>
+                                    `${new Date(s.startTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} - ${new Date(s.endTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`,
+                                )
+                                .join(", ")}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    {clinics.every(
+                      (c) => getClinicScheduleInfo(c.clinic?.id).length === 0,
+                    ) && (
+                      <p className="text-sm text-amber-600">
+                        No schedules in other clinics on the same day
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Chọn Room làm việc
+                  Choose the clinic
                 </label>
                 <div className="relative">
-                  <House className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-
+                  <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <select
-                    value={selectedRoomId}
-                    onChange={(e) => setSelectedRoomId(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg font-medium bg-white appearance-none"
+                    value={selectedClinicId}
+                    onChange={(e) => {
+                      setSelectedClinicId(e.target.value);
+                      setSelectedRoomId("");
+                      setSelectedSlots([]);
+                    }}
+                    className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg font-medium bg-white"
                   >
-                    <option value="">-- Chọn room --</option>
-                    {rooms.map((room) => (
-                      <option key={room.id} value={room.id}>
-                        Room {room.roomNumber}
+                    <option value="">-- Choose the clinic --</option>
+                    {clinics.map((c) => (
+                      <option key={c.clinic?.id} value={c.clinic?.id}>
+                        {c.clinic?.name} {c.isPrimary && "(Chinh)"}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Selected Date Display */}
-              <div className="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <Calendar className="w-5 h-5" />
-                  <span className="font-semibold">
-                    {formatDate(selectedDate)}
-                  </span>
+              {selectedClinicId && rooms.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Choose the work room
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <select
+                      value={selectedRoomId}
+                      onChange={(e) => setSelectedRoomId(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition-colors text-lg font-medium bg-white"
+                    >
+                      <option value="">-- Choose the work room --</option>
+                      {rooms.map((room) => (
+                        <option key={room.id} value={room.id}>
+                          Phong {room.roomNumber} - {room.type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Time Slots Grid */}
+              {selectedSlots.length > 0 && (
+                <div className="mb-4 p-4 bg-blue-50 rounded-xl border border-blue-100">
+                  <div className="flex items-center gap-2 text-blue-700">
+                    <Calendar className="w-5 h-5" />
+                    <span className="font-semibold">
+                      {formatDate(selectedDate)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-700">
-                    Chọn khung giờ (8:00 - 17:00)
+                    Choose a time slot (8:00 - 17:00)
                   </label>
                   {selectedSlots.length > 0 && (
                     <button
                       onClick={handleClearSelection}
                       className="text-sm text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
                     >
-                      <Trash2 className="w-4 h-4" />
-                      Xóa chọn
+                      <Trash2 className="w-4 h-4" /> Delete selection
                     </button>
                   )}
+                </div>
+
+                {/* Gioi thieu mau sac */}
+                <div className="flex gap-4 mb-3 text-xs">
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-blue-600 rounded"></div>
+                    <span>Selected</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-gray-300 rounded"></div>
+                    <span>Unavailable (cannot be selected)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-4 bg-gray-50 border-2 border-gray-200 rounded"></div>
+                    <span>Available</span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                   {timeSlots.map((time) => {
                     const isSelected = selectedSlots.includes(time);
-                    const isFirst = selectedSlots[0] === time;
-                    const isLast =
-                      selectedSlots[selectedSlots.length - 1] === time;
-
+                    const isUnavailable = unavailableSlots.has(time);
                     return (
                       <button
                         key={time}
                         onClick={() => handleSlotClick(time)}
-                        className={`
-                          relative p-3 rounded-lg font-medium text-sm transition-all
-                          ${
-                            isSelected
-                              ? 'bg-blue-600 text-white shadow-lg shadow-blue-200 scale-105'
-                              : 'bg-gray-50 text-gray-700 hover:bg-blue-100 hover:text-blue-600 border-2 border-gray-200'
-                          }
-                        `}
+                        disabled={isUnavailable}
+                        className={`p-3 rounded-lg font-medium text-sm transition-all ${
+                          isSelected
+                            ? "bg-blue-600 text-white shadow-lg"
+                            : isUnavailable
+                              ? "bg-gray-300 text-gray-500 cursor-not-allowed line-through"
+                              : "bg-gray-50 text-gray-700 hover:bg-blue-100 border-2 border-gray-200"
+                        }`}
                       >
                         {time}
-                        {isFirst && (
-                          <span className="absolute -top-2 -right-2 w-5 h-5 bg-green-500 text-white rounded-full text-xs flex items-center justify-center">
-                            S
-                          </span>
-                        )}
-                        {isLast && selectedSlots.length > 1 && (
-                          <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">
-                            E
-                          </span>
-                        )}
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Selection Info */}
               {selectedSlots.length > 0 && (
                 <div className="mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-gray-600 mb-1">Đã chọn</p>
+                      <p className="text-sm text-gray-600 mb-1">Selected</p>
                       <p className="text-lg font-bold text-gray-800">
-                        {selectedSlots[0]} -{' '}
+                        {selectedSlots[0]} -{" "}
                         {selectedSlots[selectedSlots.length - 1]}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-600 mb-1">Số khung giờ</p>
+                      <p className="text-sm text-gray-600 mb-1">
+                        Number of time slots
+                      </p>
                       <p className="text-2xl font-bold text-blue-600">
                         {selectedSlots.length}
                       </p>
@@ -378,105 +465,93 @@ export default function CreateSchedule() {
                 </div>
               )}
 
-              {/* Message */}
               {message.text && (
                 <div
                   className={`flex items-center gap-2 p-4 rounded-xl mb-6 ${
-                    message.type === 'success'
-                      ? 'bg-green-50 border border-green-200'
-                      : 'bg-red-50 border border-red-200'
+                    message.type === "success"
+                      ? "bg-green-50 border border-green-200"
+                      : "bg-red-50 border border-red-200"
                   }`}
                 >
-                  {message.type === 'success' ? (
-                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  {message.type === "success" ? (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
                   ) : (
-                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                    <AlertCircle className="w-5 h-5 text-red-600" />
                   )}
                   <p
-                    className={`text-sm font-medium ${
-                      message.type === 'success'
-                        ? 'text-green-700'
-                        : 'text-red-700'
-                    }`}
+                    className={`text-sm font-medium ${message.type === "success" ? "text-green-700" : "text-red-700"}`}
                   >
                     {message.text}
                   </p>
                 </div>
               )}
 
-              {/* Create Button */}
               <button
                 onClick={handleCreateSchedule}
-                disabled={loading || selectedSlots.length === 0}
+                disabled={
+                  loading ||
+                  selectedSlots.length === 0 ||
+                  !selectedClinicId ||
+                  !selectedRoomId
+                }
                 className={`w-full flex items-center justify-center gap-2 py-4 px-6 rounded-xl font-medium text-white transition-all ${
-                  loading || selectedSlots.length === 0
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 hover:shadow-xl'
+                  loading ||
+                  selectedSlots.length === 0 ||
+                  !selectedClinicId ||
+                  !selectedRoomId
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700 shadow-lg"
                 }`}
               >
                 {loading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Đang tạo lịch...
-                  </>
+                  "Dang tao lich..."
                 ) : (
                   <>
-                    <Save className="w-5 h-5" />
-                    Tạo lịch làm việc
+                    <Save className="w-5 h-5" /> Create schedule
                   </>
                 )}
               </button>
             </div>
           </div>
 
-          {/* Sidebar - Created Schedules */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-2xl shadow-xl p-6 sticky top-6">
               <h2 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-blue-600" />
-                Lịch đã tạo
+                <Clock className="w-5 h-5 text-blue-600" /> Created schedules
               </h2>
 
               {createdSchedules.length > 0 ? (
                 <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {createdSchedules.map((schedule, index) => (
+                  {createdSchedules.map((schedule) => (
                     <div
-                      key={schedule.id || index}
-                      className="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-100 group hover:shadow-md transition-shadow"
+                      key={schedule.id}
+                      className="p-3 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-100 group"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="text-xs text-gray-600 mb-1">
                             {new Date(schedule.date).toLocaleDateString(
-                              'vi-VN',
+                              "vi-VN",
                             )}
                           </p>
                           <p className="font-semibold text-gray-800 text-sm">
-                            {schedule.startTime} - {schedule.endTime}
+                            {new Date(schedule.startTime).toLocaleTimeString(
+                              "vi-VN",
+                              { hour: "2-digit", minute: "2-digit" },
+                            )}{" "}
+                            -
+                            {new Date(schedule.endTime).toLocaleTimeString(
+                              "vi-VN",
+                              { hour: "2-digit", minute: "2-digit" },
+                            )}
                           </p>
                           <p className="text-xs text-blue-600 mt-1">
-                            {schedule.slots} khung giờ
+                            {schedule.clinic?.name}
                           </p>
                         </div>
                         <button
-                          onClick={() => deleteSchedule(index)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-100 rounded text-red-600"
-                          title="Xóa lịch"
+                          onClick={() => deleteSchedule(schedule.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 rounded text-red-600"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -486,44 +561,12 @@ export default function CreateSchedule() {
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Clock className="w-6 h-6 text-gray-400" />
-                  </div>
+                  <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-sm text-gray-500">
-                    Chưa có lịch nào được tạo
+                    No schedules created yet
                   </p>
                 </div>
               )}
-            </div>
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="mt-6 bg-white rounded-xl shadow p-4">
-          <div className="flex items-center gap-6 justify-center text-sm">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gray-50 border-2 border-gray-200 rounded"></div>
-              <span className="text-gray-600">Chưa chọn</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-600 rounded"></div>
-              <span className="text-gray-600">Đã chọn</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative w-8 h-8 bg-blue-600 rounded">
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 text-white rounded-full text-xs flex items-center justify-center">
-                  S
-                </span>
-              </div>
-              <span className="text-gray-600">Giờ bắt đầu</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative w-8 h-8 bg-blue-600 rounded">
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">
-                  E
-                </span>
-              </div>
-              <span className="text-gray-600">Giờ kết thúc</span>
             </div>
           </div>
         </div>

@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+/** @format */
+
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useLocation } from "react-router-dom";
 import {
   Calendar,
   Users,
@@ -8,136 +11,104 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  AlertCircle,
   TrendingUp,
-  Activity,
   Phone,
   Mail,
-} from 'lucide-react';
-import { useParams } from 'react-router';
+  Building2,
+} from "lucide-react";
 
 const DoctorDashboard = () => {
+  const location = useLocation();
   const [stats, setStats] = useState({
     todayAppointments: 0,
     totalPatients: 0,
     monthlyRevenue: 0,
     averageRating: 0,
   });
+  const [clinics, setClinics] = useState([]);
   const [todaySchedule, setTodaySchedule] = useState([]);
   const [upcomingAppointments, setUpcomingAppointments] = useState([]);
   const [recentPatients, setRecentPatients] = useState([]);
-  const [revenueData, setRevenueData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [doctorData, setDoctorData] = useState(null);
 
-  const doctorId = 1; // Lấy từ auth hoặc localStorage
   useEffect(() => {
     fetchDashboardData();
-  }, []);
+  }, [location.pathname]);
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      console.log('recentPatients state:', recentPatients);
+      const token = sessionStorage.getItem("token");
+      const userData = JSON.parse(sessionStorage.getItem("user") || "{}");
 
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        window.location.href = '/login';
+      if (!token || !userData.id) {
+        window.location.href = "/login";
         return;
       }
 
       const headers = { Authorization: `Bearer ${token}` };
 
-      /* =================================================
-       1️⃣ FETCH APPOINTMENTS CỦA DOCTOR (API DUY NHẤT)
-       ================================================= */
-      const appointmentsRes = await axios.get(
-        `http://localhost:8080/api/appointments/doctor/${doctorId}`,
+      // 1. Get doctor info and assignments
+      const doctorRes = await axios.get(
+        `http://localhost:8080/api/doctor-clinic/assignments/${userData.doctor?.id || userData.id}`,
         { headers },
       );
-      console.log('appointments raw:', appointmentsRes.data);
-      console.log('appointments data:', appointmentsRes.data.data);
+      const doctorClinics = doctorRes.data.data || [];
+      setClinics(doctorClinics.map((a) => a.clinic));
 
+      // 2. Get appointments for this doctor
+      const appointmentsRes = await axios.get(
+        `http://localhost:8080/api/appointments/doctor/${userData.doctor?.id || userData.id}`,
+        { headers },
+      );
       const appointments = appointmentsRes.data.data || [];
 
-      /* =================================================
-       2️⃣ SET TODAY SCHEDULE
-       ================================================= */
-      const today = new Date().toISOString().split('T')[0];
-
-      const isSameDayPL = (d1, d2) => {
-        const a = new Date(d1).toLocaleDateString('en-CA', {
-          timeZone: 'Europe/Warsaw',
-        });
-        const b = new Date(d2).toLocaleDateString('en-CA', {
-          timeZone: 'Europe/Warsaw',
-        });
-        return a === b;
-      };
-
-      const todaySchedule = appointments.filter((apt) =>
-        isSameDayPL(apt.startTime, new Date()),
-      );
-
-      setTodaySchedule(todaySchedule);
-
-      /* =================================================
-       3️⃣ SET UPCOMING APPOINTMENTS (7 NGÀY)
-       ================================================= */
-      const upcomingAppointments = appointments
-        .filter(
-          (apt) =>
-            new Date(apt.date) > new Date() && apt.date.split('T')[0] !== today,
-        )
-        .slice(0, 5);
-
-      setUpcomingAppointments(upcomingAppointments);
-
-      /* =================================================
-       4️⃣ MAP PATIENTS TỪ APPOINTMENTS (CHỐT LỖI Ở ĐÂY)
-       ================================================= */
-      const patientsMap = new Map();
-
-      appointments.forEach((apt) => {
-        // DEBUG – bạn có thể xoá sau
-        console.log(
-          'START RAW:',
-          apt.startTime,
-          'START PL:',
-          new Date(apt.startTime).toLocaleString('en-GB', {
-            timeZone: 'Europe/Warsaw',
-          }),
-          'NOW PL:',
-          new Date().toLocaleString('en-GB', {
-            timeZone: 'Europe/Warsaw',
-          }),
+      // 3. Get feedback/rating for this doctor
+      let rating = 0;
+      try {
+        const feedbackRes = await axios.get(
+          `http://localhost:8080/api/doctors/${userData.doctor?.id || userData.id}`,
+          { headers },
         );
-        console.log('mapping apt:', apt.id, apt.patient);
+        rating = feedbackRes.data.data?.rating || 0;
+      } catch (e) {
+        console.log("No feedback data");
+      }
 
-        if (!apt.patient || !apt.patient.user) return;
+      // 4. Calculate stats
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
 
-        if (!patientsMap.has(apt.patient.id)) {
-          patientsMap.set(apt.patient.id, {
-            patientId: apt.patient.id,
-            user: {
-              firstName: apt.patient.user.firstName,
-              lastName: apt.patient.user.lastName,
-              phone: apt.patient.user.phone,
-              email: apt.patient.user.email,
-            },
-            lastVisit: apt.date,
-          });
+      const todayAppointments = appointments.filter((apt) => {
+        const aptDate = new Date(apt.date).toISOString().split("T")[0];
+        return aptDate === todayStr;
+      });
+
+      const patientsMap = new Map();
+      appointments.forEach((apt) => {
+        if (apt.patient?.id && !patientsMap.has(apt.patient.id)) {
+          patientsMap.set(apt.patient.id, apt.patient);
         }
       });
 
-      const patients = Array.from(patientsMap.values());
+      setDoctorData(userData);
+      setStats({
+        todayAppointments: todayAppointments.length,
+        totalPatients: patientsMap.size,
+        monthlyRevenue: 0,
+        averageRating: rating,
+      });
 
-      console.log('FINAL patients:', patients);
-
-      setRecentPatients(patients);
+      setTodaySchedule(todayAppointments.slice(0, 5));
+      setUpcomingAppointments(
+        appointments.filter((apt) => new Date(apt.date) > today).slice(0, 5),
+      );
+      setRecentPatients(Array.from(patientsMap.values()).slice(0, 5));
 
       setLoading(false);
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      console.error("Error fetching dashboard data:", error);
       setLoading(false);
     }
   };
@@ -145,27 +116,27 @@ const DoctorDashboard = () => {
   const getStatusBadge = (status) => {
     const badges = {
       pending: {
-        bg: 'bg-yellow-100',
-        text: 'text-yellow-800',
-        label: 'Chờ xác nhận',
+        bg: "bg-yellow-100",
+        text: "text-yellow-800",
+        label: "Pending",
         icon: Clock,
       },
       confirmed: {
-        bg: 'bg-blue-100',
-        text: 'text-blue-800',
-        label: 'Đã xác nhận',
+        bg: "bg-blue-100",
+        text: "text-blue-800",
+        label: "Confirmed",
         icon: CheckCircle,
       },
       completed: {
-        bg: 'bg-green-100',
-        text: 'text-green-800',
-        label: 'Hoàn thành',
+        bg: "bg-green-100",
+        text: "text-green-800",
+        label: "Completed",
         icon: CheckCircle,
       },
       cancelled: {
-        bg: 'bg-red-100',
-        text: 'text-red-800',
-        label: 'Đã hủy',
+        bg: "bg-red-100",
+        text: "text-red-800",
+        label: "Cancelled",
         icon: XCircle,
       },
     };
@@ -182,24 +153,24 @@ const DoctorDashboard = () => {
   };
 
   const formatTime = (isoString) => {
-    if (!isoString) return '--:--';
+    if (!isoString) return "--:--";
 
-    return new Date(isoString).toLocaleTimeString('vi-VN', {
-      timeZone: 'Europe/Warsaw',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(isoString).toLocaleTimeString("vi-VN", {
+      timeZone: "Europe/Warsaw",
+      hour: "2-digit",
+      minute: "2-digit",
       hour12: false,
     });
   };
 
   const formatDate = (isoString) => {
-    if (!isoString) return '';
+    if (!isoString) return "";
 
-    return new Date(isoString).toLocaleDateString('vi-VN', {
-      timeZone: 'Europe/Warsaw',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
+    return new Date(isoString).toLocaleDateString("vi-VN", {
+      timeZone: "Europe/Warsaw",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
@@ -212,21 +183,23 @@ const DoctorDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-          <p className="text-gray-600 mt-1">
-            Chào mừng trở lại! Đây là tổng quan công việc của bạn.
+        <div className="mb-4 md:mb-8">
+          <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 mt-1 text-sm md:text-base">
+            Welcome back! This is your work overview.
           </p>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-4 md:mb-6 lg:mb-8">
           <StatCard
             icon={Calendar}
-            title="Lịch hôm nay"
+            title="Today's Schedule"
             value={stats.todayAppointments || todaySchedule.length}
             subtitle="appointments"
             color="blue"
@@ -234,23 +207,23 @@ const DoctorDashboard = () => {
           />
           <StatCard
             icon={Users}
-            title="Tổng bệnh nhân"
+            title="Total Patients"
             value={stats.totalPatients || 245}
-            subtitle="trong tháng"
+            subtitle="this month"
             color="green"
             trend="+8%"
           />
           <StatCard
             icon={DollarSign}
-            title="Doanh thu tháng"
-            value={`${(stats.monthlyRevenue || 15000000).toLocaleString('vi-VN')}đ`}
-            subtitle="VND"
+            title="Monthly Revenue"
+            value={`${((stats.monthlyRevenue || 15000000) / 1000000).toFixed(1)}M`}
+            subtitle="USD"
             color="purple"
             trend="+15%"
           />
           <StatCard
             icon={Star}
-            title="Đánh giá"
+            title="Rating"
             value={stats.averageRating || 4.8}
             subtitle="⭐⭐⭐⭐⭐"
             color="yellow"
@@ -258,19 +231,44 @@ const DoctorDashboard = () => {
           />
         </div>
 
+        {/* Clinics Assigned */}
+        {clinics.length > 0 && (
+          <div className="bg-white rounded-xl md:rounded-2xl shadow-lg p-4 md:p-6 border-2 border-gray-100 mb-4 md:mb-6">
+            <h2 className="text-lg md:text-xl font-bold text-gray-800 mb-3 md:mb-4 flex items-center gap-2">
+              <Building2 className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+              Assigned Clinics
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              {clinics.map((clinic) => (
+                <div
+                  key={clinic.id}
+                  className="p-3 md:p-4 bg-blue-50 rounded-lg md:rounded-xl border border-blue-100"
+                >
+                  <h3 className="font-semibold text-gray-800 text-sm md:text-base">
+                    {clinic.name}
+                  </h3>
+                  <p className="text-xs md:text-sm text-gray-600 mt-1">
+                    {clinic.address}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Today's Schedule */}
           <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-100">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <Calendar className="w-6 h-6 text-blue-600" />
-                Lịch hôm nay
+                Today's Schedule
               </h2>
               <span className="text-sm text-gray-500">
-                {new Date().toLocaleDateString('vi-VN', {
-                  weekday: 'long',
-                  day: 'numeric',
-                  month: 'long',
+                {new Date().toLocaleDateString("vi-VN", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
                 })}
               </span>
             </div>
@@ -294,11 +292,11 @@ const DoctorDashboard = () => {
 
                       <div className="flex-1">
                         <h3 className="font-semibold text-gray-800">
-                          {appointment.patient?.user?.firstName}{' '}
+                          {appointment.patient?.user?.firstName}{" "}
                           {appointment.patient?.user?.lastName}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          {appointment.reason || 'Khám tổng quát'}
+                          {appointment.reason || "General check-up"}
                         </p>
                       </div>
 
@@ -306,14 +304,14 @@ const DoctorDashboard = () => {
                     </div>
 
                     <div className="flex gap-2 ml-4">
-                      {appointment.status === 'pending' && (
+                      {appointment.status === "pending" && (
                         <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">
-                          Xác nhận
+                          Confirm
                         </button>
                       )}
-                      {appointment.status === 'confirmed' && (
+                      {appointment.status === "confirmed" && (
                         <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-semibold hover:bg-green-700 transition">
-                          Bắt đầu
+                          Start
                         </button>
                       )}
                     </div>
@@ -322,7 +320,7 @@ const DoctorDashboard = () => {
               ) : (
                 <div className="text-center py-12">
                   <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">Không có lịch hẹn nào hôm nay</p>
+                  <p className="text-gray-500">No appointments today</p>
                 </div>
               )}
             </div>
@@ -332,7 +330,7 @@ const DoctorDashboard = () => {
           <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-100">
             <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
               <Clock className="w-6 h-6 text-purple-600" />
-              Lịch sắp tới
+              Upcoming Appointments
             </h2>
 
             <div className="space-y-3">
@@ -351,24 +349,26 @@ const DoctorDashboard = () => {
                       </span>
                     </div>
                     <h4 className="font-semibold text-gray-800 text-sm">
-                      {appointment.patient?.user?.firstName}{' '}
+                      {appointment.patient?.user?.firstName}{" "}
                       {appointment.patient?.user?.lastName}
                     </h4>
                     <p className="text-xs text-gray-600 mt-1">
-                      {appointment.reason || 'Khám tổng quát'}
+                      {appointment.reason || "General check-up"}
                     </p>
                   </div>
                 ))
               ) : (
                 <div className="text-center py-8">
                   <Clock className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">Chưa có lịch sắp tới</p>
+                  <p className="text-gray-500 text-sm">
+                    No upcoming appointments
+                  </p>
                 </div>
               )}
             </div>
 
             <button className="w-full mt-4 py-2 text-purple-600 font-semibold text-sm hover:bg-purple-50 rounded-lg transition">
-              Xem tất cả →
+              View all →
             </button>
           </div>
         </div>
@@ -377,7 +377,7 @@ const DoctorDashboard = () => {
         <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-100">
           <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center gap-2">
             <Users className="w-6 h-6 text-green-600" />
-            Bệnh nhân gần đây
+            Recent Patients
           </h2>
 
           <div className="overflow-x-auto">
@@ -385,19 +385,19 @@ const DoctorDashboard = () => {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
-                    Bệnh nhân
+                    Patient
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
-                    Liên hệ
+                    Contact
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
-                    Lần khám cuối
+                    Last Visit
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
-                    Trạng thái
+                    Status
                   </th>
                   <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
-                    Hành động
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -428,18 +428,18 @@ const DoctorDashboard = () => {
                         <div className="text-sm text-gray-600">
                           <div className="flex items-center gap-2 mb-1">
                             <Phone className="w-3 h-3" />
-                            {patient.user?.phone || 'N/A'}
+                            {patient.user?.phone || "N/A"}
                           </div>
                           <div className="flex items-center gap-2">
                             <Mail className="w-3 h-3" />
-                            {patient.user?.email || 'N/A'}
+                            {patient.user?.email || "N/A"}
                           </div>
                         </div>
                       </td>
                       <td className="py-4 px-4 text-sm text-gray-600">
                         {patient.lastVisit
                           ? formatDate(patient.lastVisit)
-                          : 'Chưa khám'}
+                          : "No visit"}
                       </td>
                       <td className="py-4 px-4">
                         <span className="inline-block px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
@@ -448,7 +448,7 @@ const DoctorDashboard = () => {
                       </td>
                       <td className="py-4 px-4">
                         <button className="text-blue-600 hover:text-blue-700 font-semibold text-sm">
-                          Xem chi tiết →
+                          View details →
                         </button>
                       </td>
                     </tr>
@@ -456,7 +456,7 @@ const DoctorDashboard = () => {
                 ) : (
                   <tr>
                     <td colSpan="5" className="py-12 text-center text-gray-500">
-                      Chưa có bệnh nhân nào
+                      No patients yet
                     </td>
                   </tr>
                 )}
@@ -472,10 +472,10 @@ const DoctorDashboard = () => {
 // Statistics Card Component
 const StatCard = ({ icon: Icon, title, value, subtitle, color, trend }) => {
   const colors = {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    purple: 'from-purple-500 to-purple-600',
-    yellow: 'from-yellow-500 to-yellow-600',
+    blue: "from-blue-500 to-blue-600",
+    green: "from-green-500 to-green-600",
+    purple: "from-purple-500 to-purple-600",
+    yellow: "from-yellow-500 to-yellow-600",
   };
 
   return (

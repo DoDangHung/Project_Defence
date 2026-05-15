@@ -1,4 +1,6 @@
-import React from 'react';
+/** @format */
+
+import React from "react";
 
 function Footer() {
   return (
@@ -13,60 +15,60 @@ function Footer() {
               <span className="text-xl font-bold">HealthCare</span>
             </div>
             <p className="text-gray-400">
-              Nền tảng đặt lịch khám chữa bệnh hàng đầu Việt Nam
+              The leading platform for booking medical appointments in Vietnam
             </p>
           </div>
           <div>
-            <h4 className="font-bold mb-4">Dịch Vụ</h4>
+            <h4 className="font-bold mb-4">Services</h4>
             <ul className="space-y-2 text-gray-400">
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Khám Tổng Quát
+                  General Checkup
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Nha Khoa
+                  Dental
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Tim Mạch
+                  Cardiology
                 </a>
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="font-bold mb-4">Về Chúng Tôi</h4>
+            <h4 className="font-bold mb-4">About Us</h4>
             <ul className="space-y-2 text-gray-400">
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Giới Thiệu
+                  Introduction
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Đội Ngũ
+                  Team
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white transition">
-                  Tin Tức
+                  News
                 </a>
               </li>
             </ul>
           </div>
           <div>
-            <h4 className="font-bold mb-4">Liên Hệ</h4>
+            <h4 className="font-bold mb-4">Contact</h4>
             <ul className="space-y-2 text-gray-400">
               <li>1900 xxxx</li>
               <li>info@healthcare.vn</li>
-              <li>123 Đường ABC, Q.1, TP.HCM</li>
+              <li>123 ABC Street, Q.1, TP.HCM</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-          <p>&copy; 2024 HealthCare. All rights reserved.</p>
+          <p>&copy; 2026 HealthCare. All rights reserved.</p>
         </div>
       </div>
     </footer>

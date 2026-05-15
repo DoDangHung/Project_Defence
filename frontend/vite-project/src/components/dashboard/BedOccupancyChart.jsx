@@ -3,17 +3,13 @@ import CardFull from '../layouts/CardFull.jsx';
 
 const BedOccupancyChart = () => {
   const barData = [
-    { label: 'Not Ready', value: 128 },
-    { label: 'Arrived', value: 35 },
-    { label: 'Open', value: 502 },
-    { label: 'Admitted', value: 859 },
-    { label: 'Registered', value: 11 },
-    { label: 'Wait', value: 38 },
-    { label: 'Hold', value: 224 },
+    { label: 'Arrived', value: 502 },
+    { label: 'Cancel', value: 35 },
+    { label: 'Payment Refund', value: 50 },
   ];
 
   return (
-    <CardFull title="Bed Occupancy (938/1797)">
+    <CardFull title="Clinic Overview">
       <div className="w-full h-48 flex items-end space-x-3">
         {barData.map((b, i) => (
           <div key={i} className="flex-1 flex flex-col items-center">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
-import { Calendar, Clock, AlertCircle, Loader } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, Loader, Users } from 'lucide-react';
 
 const StepSelectTime = ({ doctorId, onSelectTime }) => {
   const [slots, setSlots] = useState([]);
@@ -17,7 +17,7 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
     }
   }, [doctorId]);
 
-  // StepSelectTime.jsx - SỬA LẠI fetchSlots
+  // Fetch slots from API
   const fetchSlots = async () => {
     setLoading(true);
     setError('');
@@ -26,8 +26,6 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
         `http://localhost:8080/api/schedules/doctor/${doctorId}`,
       );
       const data = await response.json();
-
-      console.log('Raw API response:', data);
 
       const schedules = data?.data ?? data?.schedules ?? [];
 
@@ -47,8 +45,6 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
           roomName: schedule.room?.name,
         };
 
-        console.log('Room info from schedule:', roomInfo);
-
         return schedule.slots.map((slot) => ({
           ...slot,
           ...roomInfo, // ✅ Spread room info vào slot
@@ -56,8 +52,6 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
           id: slot.id || `${schedule.id}-${slot.index}`,
         }));
       });
-
-      console.log('Slots with room info:', scheduleArray);
 
       // Loại bỏ duplicate slots
       const uniqueSlots = [
@@ -69,8 +63,6 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
       const validSlots = uniqueSlots.filter(
         (slot) => !slot.isBooked && new Date(slot.end) > new Date(),
       );
-
-      console.log('Valid slots:', validSlots);
 
       setSlots(validSlots);
 
@@ -100,9 +92,14 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
     (s) => Number(s.start.slice(11, 13)) >= 12,
   );
 
+  const getSlotClass = (slot) => {
+    if (slot.isFull) return 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed';
+    if (selectedSlot?.start === slot.start) return 'bg-green-600 text-white border-green-600';
+    return 'bg-white text-gray-700 border-gray-200 hover:bg-green-50';
+  };
+
   const handleSelect = (slot) => {
-    console.log('Selected slot:', slot);
-    console.log('roomId in selected slot:', slot.roomId);
+    if (slot.isFull) return;
 
     setSelectedSlot(slot);
     onSelectTime?.(slot);
@@ -124,25 +121,16 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
         scheduleId: selectedSlot.scheduleId,
         slotId: selectedSlot.id,
         slotIndex: selectedSlot.index,
-        roomId: selectedSlot.roomId, // ✅ Từ schedule.room
-        roomNumber: selectedSlot.roomNumber, // ✅ Từ schedule.room
-        roomName: selectedSlot.roomName, // ✅ Từ schedule.room (optional)
+        roomId: selectedSlot.roomId,
+        roomNumber: selectedSlot.roomNumber,
+        roomName: selectedSlot.roomName,
         appointmentDate: selectedSlot.start.slice(0, 10),
         start: selectedSlot.start,
         end: selectedSlot.end,
-        startTime: selectedSlot.start, // ✅ Thêm dòng này
-        endTime: selectedSlot.end, // ✅ Thêm dòng này
+        startTime: selectedSlot.start,
+        endTime: selectedSlot.end,
       }),
     );
-
-    console.log('✅ Saved booking time:', {
-      date: selectedSlot.start.slice(0, 10),
-      time: `${formatTime(selectedSlot.start)} - ${formatTime(
-        selectedSlot.end,
-      )}`,
-      roomId: selectedSlot.roomId,
-      roomNumber: selectedSlot.roomNumber,
-    });
 
     navigate('/booking/formAuth');
   };
@@ -227,13 +215,13 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
                     <button
                       key={slot.start}
                       onClick={() => handleSelect(slot)}
-                      className={`p-3 rounded-lg border-2 text-sm font-semibold transition-all ${
-                        selectedSlot?.start === slot.start
-                          ? 'bg-green-600 text-white border-green-600'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-green-50'
-                      }`}
+                      disabled={slot.isFull}
+                      className={`p-3 rounded-lg border-2 text-sm font-semibold transition-all ${getSlotClass(slot)}`}
                     >
-                      {formatTime(slot.start)} - {formatTime(slot.end)}
+                      <div>{formatTime(slot.start)} - {formatTime(slot.end)}</div>
+                      <div className={`text-xs mt-1 ${slot.isFull ? 'text-red-400' : slot.bookedCount > 0 ? 'text-orange-500' : 'text-green-600'}`}>
+                        {slot.isFull ? 'Hết chỗ' : `${slot.bookedCount || 0}/${slot.maxPatients} lượt`}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -251,13 +239,13 @@ const StepSelectTime = ({ doctorId, onSelectTime }) => {
                     <button
                       key={slot.start}
                       onClick={() => handleSelect(slot)}
-                      className={`p-3 rounded-lg border-2 text-sm font-semibold transition-all ${
-                        selectedSlot?.start === slot.start
-                          ? 'bg-green-600 text-white border-green-600'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-green-50'
-                      }`}
+                      disabled={slot.isFull}
+                      className={`p-3 rounded-lg border-2 text-sm font-semibold transition-all ${getSlotClass(slot)}`}
                     >
-                      {formatTime(slot.start)} - {formatTime(slot.end)}
+                      <div>{formatTime(slot.start)} - {formatTime(slot.end)}</div>
+                      <div className={`text-xs mt-1 ${slot.isFull ? 'text-red-400' : slot.bookedCount > 0 ? 'text-orange-500' : 'text-green-600'}`}>
+                        {slot.isFull ? 'Hết chỗ' : `${slot.bookedCount || 0}/${slot.maxPatients} lượt`}
+                      </div>
                     </button>
                   ))}
                 </div>

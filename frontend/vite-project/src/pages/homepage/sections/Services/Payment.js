@@ -1,9 +1,13 @@
-// src/services/paymentervice.js
+// Payment Service
 import axios from 'axios';
 
 const API_BASE_URL = 'http://localhost:8080/api';
 
-// Create axios instance with default config
+const getAuthHeader = () => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+};
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -11,30 +15,22 @@ const apiClient = axios.create({
   },
 });
 
-// Add token to requests if available
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-// Payment Service
 export const paymentService = {
-  /**
-   * Tạo payment mới
-   */
+  // Tạo payment mới
   createPayment: async (data) => {
     try {
       const response = await apiClient.post('/payment', {
         appointmentId: data.appointmentId,
         patientId: data.patientId,
         consultationFee: data.consultationFee,
-        depositPercentage: data.depositPercentage || 30,
         paymentMethod: data.paymentMethod,
       });
       return response.data;
@@ -43,199 +39,138 @@ export const paymentService = {
     }
   },
 
-  /**
-   * Xử lý thanh toán đặt cọc - TIỀN MẶT
-   */
-  processDepositCash: async (paymentId) => {
+  // Xử lý thanh toán đặt cọc (fake - auto success)
+  processDeposit: async (paymentId, data = {}) => {
     try {
       const response = await apiClient.post(`/payment/${paymentId}/deposit`, {
-        paymentMethod: 'cash',
-        transactionId: `CASH-${Date.now()}`,
-        provider: 'manual',
-      });
+        transactionId: data.transactionId,
+      }, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Xử lý thanh toán đặt cọc - THẺ TÍN DỤNG
-   */
-  processDepositCard: async (paymentId, cardData) => {
-    try {
-      // Step 1: Gọi Stripe để tạo payment intent (nếu cần)
-      // const stripeResponse = await stripeService.createPaymentIntent({...});
-
-      // Step 2: Xác nhận thanh toán với backend
-      const response = await apiClient.post(`/payment/${paymentId}/deposit`, {
-        paymentMethod: 'card',
-        transactionId: `STRIPE-${Date.now()}`, // Thay bằng Stripe transaction ID thực
-        provider: 'stripe',
-        metadata: {
-          cardLast4: cardData.cardNumber.slice(-4),
-          cardBrand: 'visa', // Detect từ card number
-        },
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  /**
-   * Xử lý thanh toán đặt cọc - CHUYỂN KHOẢN NGÂN HÀNG
-   */
-  processDepositBankTransfer: async (paymentId, bankData) => {
-    try {
-      // Step 1: Tạo order với PayOS
-      // const payosResponse = await payosService.createOrder({...});
-
-      // Step 2: Xác nhận với backend
-      const response = await apiClient.post(`/payment/${paymentId}/deposit`, {
-        paymentMethod: 'bank_transfer',
-        transactionId: `PAYOS-${Date.now()}`, // Thay bằng PayOS order ID thực
-        provider: 'payos',
-        metadata: {
-          bankCode: bankData.selectedBank,
-        },
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  /**
-   * Xử lý thanh toán đặt cọc - BẢO HIỂM Y TẾ
-   * Note: Insurance tự động thanh toán deposit
-   */
-  processDepositInsurance: async (paymentId, insuranceData) => {
-    try {
-      const response = await apiClient.post(`/payment/${paymentId}/deposit`, {
-        paymentMethod: 'insurance',
-        transactionId: `INS-${Date.now()}`,
-        provider: 'insurance',
-        metadata: {
-          insuranceNumber: insuranceData.insuranceNumber,
-          insuranceType: insuranceData.insuranceType,
-        },
-      });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  /**
-   * Xử lý thanh toán cuối cùng (sau khi khám)
-   */
-  processFinalPayment: async (paymentId, data) => {
+  // Xử lý thanh toán cuối cùng
+  processFinalPayment: async (paymentId, data = {}) => {
     try {
       const response = await apiClient.post(`/payment/${paymentId}/final`, {
-        paymentMethod: data.paymentMethod,
         transactionId: data.transactionId,
-        provider: data.provider || 'manual',
         additionalCharges: data.additionalCharges || [],
-      });
+      }, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Thêm chi phí phát sinh
-   */
+  // Xử lý thanh toán tiền mặt tại quầy
+  processCashPayment: async (paymentId, data = {}) => {
+    try {
+      const response = await apiClient.post(`/payment/${paymentId}/cash`, {
+        amountReceived: data.amountReceived,
+      }, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Hủy lịch với refund tự động
+  cancelWithRefund: async (paymentId, reason = '') => {
+    try {
+      const response = await apiClient.post(`/payment/${paymentId}/cancel`, {
+        reason,
+      }, getAuthHeader());
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Thêm chi phí phát sinh
   addAdditionalCharge: async (paymentId, charge) => {
     try {
       const response = await apiClient.post(`/payment/${paymentId}/charges`, {
         service: charge.service,
         amount: charge.amount,
-      });
+      }, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Hoàn tiền
-   */
-  refundPayment: async (paymentId, refundData) => {
+  // Hoàn tiền thủ công (admin)
+  manualRefund: async (paymentId, refundData) => {
     try {
       const response = await apiClient.post(`/payment/${paymentId}/refund`, {
         refundAmount: refundData.refundAmount,
         refundReason: refundData.refundReason,
-      });
+      }, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Lấy thông tin payment
-   */
+  // Lấy thông tin payment
   getPaymentById: async (paymentId) => {
     try {
-      const response = await apiClient.get(`/payment/${paymentId}`);
+      const response = await apiClient.get(`/payment/${paymentId}`, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Lấy payment theo appointment
-   */
+  // Lấy payment theo appointment
   getPaymentByAppointment: async (appointmentId) => {
     try {
-      const response = await apiClient.get(
-        `/payment/appointment/${appointmentId}`,
-      );
+      const response = await apiClient.get(`/payment/appointment/${appointmentId}`, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Lấy danh sách payment của bệnh nhân
-   */
-  getPatientpayment: async (patientId) => {
+  // Lấy danh sách payment của bệnh nhân
+  getPatientPayments: async (patientId) => {
     try {
-      const response = await apiClient.get(`/payment/patient/${patientId}`);
+      const response = await apiClient.get(`/payment/patient/${patientId}`, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Lấy lịch sử giao dịch
-   */
+  // Lấy lịch sử giao dịch
   getPaymentTransactions: async (paymentId) => {
     try {
-      const response = await apiClient.get(
-        `/payment/${paymentId}/transactions`,
-      );
+      const response = await apiClient.get(`/payment/${paymentId}/transactions`, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Thống kê doanh thu
-   */
-  getpaymenttats: async (startDate, endDate) => {
+  // Lấy chính sách refund
+  getRefundPolicy: async () => {
+    try {
+      const response = await apiClient.get('/payment/policy');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Thống kê doanh thu
+  getStats: async (startDate, endDate) => {
     try {
       const params = {};
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
-
-      const response = await apiClient.get('/payment/stats', { params });
+      const response = await apiClient.get('/payment/stats', { params, ...getAuthHeader() });
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -243,58 +178,53 @@ export const paymentService = {
   },
 };
 
-// Appointment Service (giả sử bạn cần)
+// Appointment Service
 export const appointmentService = {
-  /**
-   * Tạo appointment mới
-   */
   createAppointment: async (data) => {
     try {
       const response = await apiClient.post('/appointments', {
         patientId: data.patientId,
         doctorId: data.doctorId,
-        firstName: data.doctorFirstName,
-        lastName: data.doctorLastName,
-        clinicName: data.clinicName,
-        clinicId: data.clinicId, // ✅ Thêm
-        specialtyId: data.specialtyId,
-        scheduleId: data.scheduleId, // ✅ Thêm
+        clinicId: data.clinicId,
+        scheduleId: data.scheduleId,
         date: data.date,
-        startTime: data.startTime, // ✅ Thêm
-        endTime: data.endTime, // ✅ Thêm
-        slotIndex: data.slotIndex, // ✅ Thêm
+        startTime: data.startTime,
+        endTime: data.endTime,
+        slotIndex: data.slotIndex,
         reason: data.reason,
-        notes: data.notes,
-      });
+      }, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Lấy thông tin appointment
-   */
   getAppointmentById: async (id) => {
     try {
-      const response = await apiClient.get(`/appointments/${id}`);
+      const response = await apiClient.get(`/appointments/${id}`, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
     }
   },
 
-  /**
-   * Hủy appointment
-   */
   cancelAppointment: async (appointmentId, reason) => {
     try {
       const response = await apiClient.post(
         `/appointments/${appointmentId}/cancel`,
-        {
-          reason,
-        },
+        { reason },
+        getAuthHeader()
       );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  // Lấy appointments của bệnh nhân
+  getPatientAppointments: async (patientId) => {
+    try {
+      const response = await apiClient.get(`/appointments/patient/${patientId}`, getAuthHeader());
       return response.data;
     } catch (error) {
       throw error.response?.data || error;

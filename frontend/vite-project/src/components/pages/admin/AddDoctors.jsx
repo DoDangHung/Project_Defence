@@ -2,7 +2,6 @@ import axios from 'axios';
 import React from 'react';
 import { useState } from 'react';
 import { Link } from 'react-router';
-import Select from 'react-select';
 export default function AddDoctors() {
   const [user, setUser] = useState({
     firstName: '',
@@ -16,21 +15,11 @@ export default function AddDoctors() {
     city: '',
     state: '',
     postalCode: '',
-    roleId: null,
+    roleId: 2,
+    specialization: '',
+    experience: '',
+    bio: '',
   });
-  const roleOptions = [
-    { value: 1, label: 'Admin' },
-    { value: 2, label: 'Doctor' },
-    { value: 3, label: 'Patient' },
-    { value: 4, label: 'Nurse' },
-  ];
-
-  const handleRoleChange = (selectedOption) => {
-    setUser((prev) => ({
-      ...prev,
-      roleId: selectedOption ? selectedOption.value : null,
-    }));
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -43,10 +32,11 @@ export default function AddDoctors() {
     e.preventDefault();
     console.log('Save');
     try {
-      const res = await axios.post(`http://localhost:8080/api/users/`, {
+      const res = await axios.post(`http://localhost:8080/api/users/doctor`, {
         ...user,
         roleId: Number(user.roleId),
         dateOfBirth: user.dateOfBirth || null,
+        experience: user.experience ? Number(user.experience) : null,
       });
       console.log('Updated!', res.data);
       alert('User Added successfully!');
@@ -62,7 +52,10 @@ export default function AddDoctors() {
         city: '',
         state: '',
         postalCode: '',
-        roleId: null,
+        roleId: 2,
+        specialization: '',
+        experience: '',
+        bio: '',
       });
     } catch (err) {
       console.error('Add error:', err);
@@ -239,25 +232,6 @@ export default function AddDoctors() {
               </div>
             </div>
 
-            <div className="col-span-full">
-              <label
-                htmlFor="street-address"
-                className="block text-sm/6 font-medium text-gray-900"
-              >
-                Role
-              </label>
-              <div className="mt-2">
-                <Select
-                  options={roleOptions}
-                  value={roleOptions.find((opt) => opt.value === user.roleId)}
-                  onChange={handleRoleChange}
-                  placeholder="Select role..."
-                  isClearable
-                  required
-                />
-              </div>
-            </div>
-
             <div className="sm:col-span-2 sm:col-start-1">
               <label
                 htmlFor="city"
@@ -310,6 +284,61 @@ export default function AddDoctors() {
                   onChange={handleChange}
                   type="text"
                   autoComplete="postal-code"
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                />
+              </div>
+            </div>
+
+            <div className="col-span-full">
+              <label
+                htmlFor="specialization"
+                className="block text-sm/6 font-medium text-gray-900"
+              >
+                Specialization
+              </label>
+              <div className="mt-2">
+                <input
+                  name="specialization"
+                  value={user.specialization}
+                  onChange={handleChange}
+                  type="text"
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                />
+              </div>
+            </div>
+
+            <div className="sm:col-span-3">
+              <label
+                htmlFor="experience"
+                className="block text-sm/6 font-medium text-gray-900"
+              >
+                Years of Experience
+              </label>
+              <div className="mt-2">
+                <input
+                  name="experience"
+                  value={user.experience}
+                  onChange={handleChange}
+                  type="number"
+                  min="0"
+                  className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
+                />
+              </div>
+            </div>
+
+            <div className="col-span-full">
+              <label
+                htmlFor="bio"
+                className="block text-sm/6 font-medium text-gray-900"
+              >
+                Bio
+              </label>
+              <div className="mt-2">
+                <textarea
+                  name="bio"
+                  value={user.bio}
+                  onChange={handleChange}
+                  rows="3"
                   className="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6"
                 />
               </div>

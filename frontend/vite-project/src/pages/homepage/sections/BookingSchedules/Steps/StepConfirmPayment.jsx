@@ -1,12 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   CreditCard,
   Wallet,
   Banknote,
+  Smartphone,
   ShieldCheck,
   Loader2,
   CheckCircle,
   AlertCircle,
+  FileText,
+  Users,
+  Info,
 } from 'lucide-react';
 import { useNavigate } from 'react-router';
 import { appointmentService, paymentService } from '../../Services/Payment.js';
@@ -22,21 +26,45 @@ export default function StepConfirmPayment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [reason, setReason] = useState('');
+  const hasLoaded = useRef(false);
 
   useEffect(() => {
-    const stored = JSON.parse(localStorage.getItem('booking'));
-    console.log('🔍 Loaded booking from localStorage:', stored);
+    if (hasLoaded.current) return;
+    hasLoaded.current = true;
 
-    // ✅ Kiểm tra các field quan trọng
-    console.log('📋 Booking fields:', {
-      appointmentDate: stored?.appointmentDate,
-      startTime: stored?.startTime,
-      endTime: stored?.endTime,
-      doctorId: stored?.doctorId,
-      clinicId: stored?.clinicId,
-    });
+    const loadBooking = () => {
+      const stored = JSON.parse(localStorage.getItem('booking') || 'null');
+      if (!stored) {
+        setBooking(null);
+        return;
+      }
 
-    setBooking(stored);
+      const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+      let currentPatientId = null;
+
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          currentPatientId = user.patientId || user.id;
+        } catch (e) {}
+      }
+
+      if (currentPatientId) {
+        stored.patientId = currentPatientId;
+        localStorage.setItem('booking', JSON.stringify(stored));
+      }
+
+      setBooking(stored);
+      setReason(stored?.reason || '');
+    };
+
+    loadBooking();
+    const handleStorageChange = (e) => {
+      if (e.key === 'booking' || e.key === 'user') loadBooking();
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleConfirmBooking = async () => {
@@ -45,132 +73,59 @@ export default function StepConfirmPayment() {
       return;
     }
 
-    // Validate payment form data for non-cash methods
-    if (paymentMethod !== 'cash') {
-      if (!paymentFormData) {
-        setError('Vui lòng điền đầy đủ thông tin thanh toán');
-        return;
-      }
-
-      // Validate card data
-      if (paymentMethod === 'card') {
-        const { cardNumber, cardName, expiryDate, cvv } = paymentFormData;
-        if (!cardNumber || !cardName || !expiryDate || !cvv) {
-          setError('Vui lòng điền đầy đủ thông tin thẻ');
-          return;
-        }
-        if (cardNumber.replace(/\s/g, '').length !== 16) {
-          setError('Số thẻ không hợp lệ');
-          return;
-        }
-        if (cvv.length !== 3) {
-          setError('CVV không hợp lệ');
-          return;
-        }
-      }
-
-      // Validate bank transfer
-      if (paymentMethod === 'bank_transfer') {
-        if (!paymentFormData.selectedBank) {
-          setError('Vui lòng chọn ngân hàng');
-          return;
-        }
-      }
-
-      // Validate insurance
-      if (paymentMethod === 'insurance') {
-        const { insuranceNumber, expiryDate } = paymentFormData;
-        if (!insuranceNumber || !expiryDate) {
-          setError('Vui lòng điền đầy đủ thông tin bảo hiểm');
-          return;
-        }
-      }
-    }
-
     setLoading(true);
     setError(null);
 
     try {
-      // Step 1: Tạo appointment
       const bookingData = booking.bookingInfo || booking;
-      console.log('📤 Booking data to send:', {
-        doctorId: bookingData.doctorId,
-        clinicId: bookingData.clinicId,
-        date: bookingData.appointmentDate,
-        startTime: bookingData.startTime,
-        endTime: bookingData.endTime,
-      });
+      
+      // Get patientId from current user
+      const userStr = sessionStorage.getItem('user') || localStorage.getItem('user');
+      let patientId = 1;
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          patientId = user.patientId || user.id;
+        } catch (e) {}
+      }
+
+      // Step 1: Create appointment
       const appointmentResponse = await appointmentService.createAppointment({
-        patientId: bookingData.patientId || 1,
+        patientId,
         doctorId: bookingData.doctorId,
         clinicId: bookingData.clinicId,
         scheduleId: bookingData.scheduleId,
-        date: bookingData.appointmentDate, // ✅ Từ bookingInfo
-        // ✅ Dùng start/end thay vì startTime/endTime
-        startTime: bookingData.startTime || bookingData.start, // ✅ Fallback to start
-        endTime: bookingData.endTime || bookingData.end, // ✅ Fallback to end
-
+        date: bookingData.appointmentDate,
+        startTime: bookingData.startTime || bookingData.start,
+        endTime: bookingData.endTime || bookingData.end,
         slotIndex: bookingData.slotIndex,
         reason: booking.reason || bookingData.reason || '',
       });
 
       const appointmentId = appointmentResponse.data.id;
 
-      // Step 2: Tạo payment
+      // Step 2: Create payment record
       const paymentResponse = await paymentService.createPayment({
         appointmentId,
-        patientId: booking.patientId || 1,
+        patientId,
         consultationFee: booking.consultationFee || 500000,
-        depositPercentage: 30,
         paymentMethod,
       });
 
       const paymentId = paymentResponse.data.id;
 
-      // Step 3: Xử lý thanh toán deposit theo method
-      let depositResponse;
-
-      switch (paymentMethod) {
-        case 'cash':
-          // Tiền mặt không cần thanh toán deposit ngay
-          depositResponse = {
-            success: true,
-            message: 'Thanh toán tiền mặt tại phòng khám',
-          };
-          break;
-
-        case 'card':
-          depositResponse = await paymentService.processDepositCard(
-            paymentId,
-            paymentFormData,
-          );
-          break;
-
-        case 'bank_transfer':
-          depositResponse = await paymentService.processDepositBankTransfer(
-            paymentId,
-            paymentFormData,
-          );
-          break;
-
-        case 'insurance':
-          depositResponse = await paymentService.processDepositInsurance(
-            paymentId,
-            paymentFormData,
-          );
-          break;
-
-        default:
-          throw new Error('Phương thức thanh toán không hợp lệ');
+      // Step 3: Process payment based on method
+      // For online payments (visa, apple/google pay, bank transfer), auto-process deposit
+      const needsDeposit = ['visa_mastercard', 'apple_google_pay', 'bank_transfer'].includes(paymentMethod);
+      
+      if (needsDeposit) {
+        await paymentService.processDeposit(paymentId, {});
       }
 
       // Success
       setSuccess(true);
-
-      // Clear booking data
       localStorage.removeItem('booking');
 
-      // Navigate to success page
       setTimeout(() => {
         navigate('/booking/appointment/success', {
           state: {
@@ -178,6 +133,8 @@ export default function StepConfirmPayment() {
             paymentId,
             paymentMethod,
             depositAmount: paymentResponse.data.depositAmount,
+            consultationFee: paymentResponse.data.consultationFee,
+            remainingAmount: paymentResponse.data.remainingAmount,
           },
         });
       }, 2000);
@@ -209,20 +166,16 @@ export default function StepConfirmPayment() {
         Xác nhận thông tin & Thanh toán
       </h2>
 
-      {/* Success Message */}
       {success && (
         <div className="mb-6 bg-green-50 border-2 border-green-500 rounded-xl p-4 flex items-center gap-3 animate-pulse">
           <CheckCircle className="w-6 h-6 text-green-600" />
           <div>
             <p className="font-semibold text-green-800">Đặt lịch thành công!</p>
-            <p className="text-sm text-green-700">
-              Đang chuyển hướng đến trang xác nhận...
-            </p>
+            <p className="text-sm text-green-700">Đang chuyển hướng đến trang xác nhận...</p>
           </div>
         </div>
       )}
 
-      {/* Error Message */}
       {error && (
         <div className="mb-6 bg-red-50 border-2 border-red-500 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
@@ -234,6 +187,10 @@ export default function StepConfirmPayment() {
       )}
 
       <ConfirmBookingInfo booking={booking} />
+
+      {!(booking.reason || booking.bookingInfo?.reason) && (
+        <ReasonInput reason={reason} onChange={setReason} />
+      )}
 
       <PaymentSection
         paymentMethod={paymentMethod}
@@ -277,52 +234,73 @@ export default function StepConfirmPayment() {
    CONFIRM BOOKING INFO
 =========================== */
 function ConfirmBookingInfo({ booking }) {
-  // ISO -> HH:mm
   const toTime = (iso) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return d.toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   };
 
-  // ISO -> DD/MM/YYYY
-  const toDateDisplay = (iso) => {
+  const toDate = (iso) => {
     if (!iso) return '';
     const d = new Date(iso);
-    return d.toLocaleDateString('vi-VN');
+    return d.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   };
-  const bookingData = booking.bookingInfo || booking;
-  return (
-    <div className="bg-blue-50 rounded-xl p-6 mb-6 space-y-4">
-      <h3 className="font-semibold text-lg text-gray-800">
-        Thông tin đặt lịch
-      </h3>
 
-      <div className="grid md:grid-cols-2 gap-4 text-sm">
-        <InfoItem label="Chuyên khoa" value={bookingData.specialtyName} />
-        <InfoItem
-          label="Phòng khám"
-          value={`${bookingData.clinicName} - ${bookingData.roomNumber}`}
-        />
-        <InfoItem label="Địa chỉ" value={bookingData.clinicAddress} />
+  const calculateEstimatedTime = () => {
+    const queue = booking.queuePosition || booking.bookingInfo?.queuePosition;
+    if (!queue) return '';
+    const minutes = (queue - 1) * 15;
+    return `${minutes} phút`;
+  };
+
+  const bookingData = booking.bookingInfo || booking;
+
+  return (
+    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 mb-6">
+      <h3 className="font-semibold text-lg text-gray-800 mb-4">Thông tin đặt lịch</h3>
+      <div className="grid md:grid-cols-2 gap-4">
         <InfoItem
           label="Bác sĩ"
-          value={`${bookingData.doctorFirstName}  ${
-            bookingData.doctorLastName
-          }`}
+          value={booking.doctorName || bookingData.doctorName}
+        />
+        <InfoItem
+          label="Chuyên khoa"
+          value={booking.specialtyName || bookingData.specialtyName}
+        />
+        <InfoItem
+          label="Phòng khám"
+          value={booking.clinicName || bookingData.clinicName}
+        />
+        <InfoItem
+          label="Địa chỉ"
+          value={booking.clinicAddress || bookingData.clinicAddress}
         />
         <InfoItem
           label="Ngày khám"
-          value={toDateDisplay(bookingData.appointmentDate)}
+          value={toDate(booking.appointmentDate || bookingData.appointmentDate)}
         />
         <InfoItem
           label="Giờ khám"
-          value={`${toTime(bookingData.startTime)} - ${toTime(
-            bookingData.endTime,
-          )}`}
+          value={`${toTime(booking.startTime || bookingData.startTime)} - ${toTime(booking.endTime || bookingData.endTime)}`}
         />
+
+        {booking.queuePosition || bookingData.queuePosition ? (
+          <div className="md:col-span-2 bg-green-100 border border-green-300 rounded-lg p-3">
+            <div className="flex items-center gap-2 text-green-800">
+              <Users className="w-5 h-5" />
+              <span className="font-semibold">Số thứ tự đăng ký:</span>
+              <span className="text-xl font-bold">
+                {booking.queuePosition || bookingData.queuePosition}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <InfoItem
+            label="Số thứ tự"
+            value="Sẽ được xác nhận sau khi đặt lịch"
+          />
+        )}
+
         <InfoItem
           label="Bệnh nhân"
           value={booking.fullName || bookingData.fullName}
@@ -352,6 +330,8 @@ function InfoItem({ label, value }) {
 /* ===========================
    PAYMENT SECTION
 =========================== */
+const DEPOSIT_PERCENTAGE = 25;
+
 function PaymentSection({
   paymentMethod,
   setPaymentMethod,
@@ -359,38 +339,74 @@ function PaymentSection({
   setPaymentFormData,
   consultationFee,
 }) {
-  const depositAmount = (consultationFee * 30) / 100;
+  const depositAmount = (consultationFee * DEPOSIT_PERCENTAGE) / 100;
+  const remainingAmount = consultationFee - depositAmount;
 
   const payments = [
     {
       key: 'cash',
-      label: 'Tiền mặt tại phòng khám',
-      desc: 'Thanh toán trực tiếp khi đến khám',
+      label: 'Thanh toán khi đến khám',
+      desc: 'Tiền mặt, thẻ tại quầy',
       icon: <Banknote className="w-6 h-6" />,
-      note: 'Không cần đặt cọc trước. Thanh toán toàn bộ khi đến phòng khám.',
+      color: 'amber',
+      requiresDeposit: false,
+      note: 'Thanh toán toàn bộ phí khám khi đến phòng khám. Không mất phí đặt cọc.',
     },
     {
-      key: 'card',
-      label: 'Thẻ tín dụng / Ghi nợ',
-      desc: 'Visa, MasterCard, JCB',
+      key: 'visa_mastercard',
+      label: 'Thẻ Visa / Mastercard',
+      desc: 'Thanh toán online an toàn',
       icon: <CreditCard className="w-6 h-6" />,
-      note: `Đặt cọc ${depositAmount.toLocaleString('vi-VN')}đ qua Stripe`,
+      color: 'blue',
+      requiresDeposit: true,
+      note: `Đặt cọc ${DEPOSIT_PERCENTAGE}% (${depositAmount.toLocaleString('vi-VN')}đ). Phần còn lại thanh toán khi đến khám.`,
+    },
+    {
+      key: 'apple_google_pay',
+      label: 'Apple Pay / Google Pay',
+      desc: 'Thanh toán nhanh qua ví điện tử',
+      icon: <Smartphone className="w-6 h-6" />,
+      color: 'indigo',
+      requiresDeposit: true,
+      note: `Đặt cọc ${DEPOSIT_PERCENTAGE}% (${depositAmount.toLocaleString('vi-VN')}đ). Phần còn lại thanh toán khi đến khám.`,
     },
     {
       key: 'bank_transfer',
       label: 'Chuyển khoản ngân hàng',
       desc: 'Chuyển khoản trước khi khám',
       icon: <Wallet className="w-6 h-6" />,
-      note: `Đặt cọc ${depositAmount.toLocaleString('vi-VN')}đ qua PayOS`,
-    },
-    {
-      key: 'insurance',
-      label: 'Bảo hiểm y tế',
-      desc: 'Áp dụng theo quy định BHYT',
-      icon: <ShieldCheck className="w-6 h-6" />,
-      note: 'Miễn phí đặt cọc. Xuất trình thẻ BHYT khi khám.',
+      color: 'green',
+      requiresDeposit: true,
+      note: `Đặt cọc ${DEPOSIT_PERCENTAGE}% (${depositAmount.toLocaleString('vi-VN')}đ). Phần còn lại thanh toán khi đến khám.`,
     },
   ];
+
+  const colorClasses = {
+    amber: {
+      selected: 'border-amber-500 bg-amber-50',
+      unselected: 'border-gray-200 hover:border-amber-400',
+      iconBg: 'bg-amber-100 text-amber-600',
+      iconSelected: 'bg-amber-500 text-white',
+    },
+    blue: {
+      selected: 'border-blue-500 bg-blue-50',
+      unselected: 'border-gray-200 hover:border-blue-400',
+      iconBg: 'bg-blue-100 text-blue-600',
+      iconSelected: 'bg-blue-500 text-white',
+    },
+    indigo: {
+      selected: 'border-indigo-500 bg-indigo-50',
+      unselected: 'border-gray-200 hover:border-indigo-400',
+      iconBg: 'bg-indigo-100 text-indigo-600',
+      iconSelected: 'bg-indigo-500 text-white',
+    },
+    green: {
+      selected: 'border-green-500 bg-green-50',
+      unselected: 'border-gray-200 hover:border-green-400',
+      iconBg: 'bg-green-100 text-green-600',
+      iconSelected: 'bg-green-500 text-white',
+    },
+  };
 
   return (
     <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
@@ -406,312 +422,100 @@ function PaymentSection({
         </div>
       </div>
 
+      {/* Refund Policy Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-semibold mb-2">Chính sách hủy lịch & hoàn tiền:</p>
+            <ul className="space-y-1">
+              <li>• <strong>Hủy trước 24 giờ:</strong> Hoàn 100% tiền đặt cọc</li>
+              <li>• <strong>Hủy trước 12 giờ:</strong> Hoàn 50% tiền đặt cọc</li>
+              <li>• <strong>Hủy trong 2 giờ:</strong> Không hoàn tiền đặt cọc</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <div className="grid md:grid-cols-2 gap-4 mb-6">
         {payments.map((p) => (
           <button
             key={p.key}
             onClick={() => {
               setPaymentMethod(p.key);
-              setPaymentFormData(null); // Reset form data when changing method
+              setPaymentFormData(null);
             }}
             className={`flex items-start gap-4 p-4 border-2 rounded-xl text-left transition
-              ${
-                paymentMethod === p.key
-                  ? 'border-blue-600 bg-blue-50'
-                  : 'border-gray-200 hover:border-blue-400'
-              }`}
+              ${paymentMethod === p.key ? colorClasses[p.color].selected : colorClasses[p.color].unselected}`}
           >
-            <div
-              className={`p-2 rounded-lg ${
-                paymentMethod === p.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-            >
+            <div className={`p-2 rounded-lg ${paymentMethod === p.key ? colorClasses[p.color].iconSelected : colorClasses[p.color].iconBg}`}>
               {p.icon}
             </div>
-
             <div className="flex-1">
               <p className="font-semibold text-gray-800">{p.label}</p>
               <p className="text-sm text-gray-600">{p.desc}</p>
               {paymentMethod === p.key && (
-                <p className="text-xs text-blue-600 mt-2">{p.note}</p>
+                <p className="text-xs text-blue-600 mt-2 font-medium">{p.note}</p>
               )}
             </div>
           </button>
         ))}
       </div>
 
-      {/* Payment Forms */}
-      {paymentMethod === 'card' && (
-        <CardPaymentForm
-          depositAmount={depositAmount}
-          formData={paymentFormData}
-          setFormData={setPaymentFormData}
-        />
+      {/* Payment Summary */}
+      {paymentMethod && (
+        <div className="bg-gray-50 rounded-xl p-4 mb-4">
+          <h4 className="font-semibold text-gray-800 mb-3">Chi tiết thanh toán</h4>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Phí khám:</span>
+              <span className="font-medium">{consultationFee.toLocaleString('vi-VN')}đ</span>
+            </div>
+            {paymentMethod !== 'cash' && (
+              <>
+                <div className="flex justify-between text-green-600">
+                  <span>Đặt cọc ({DEPOSIT_PERCENTAGE}%):</span>
+                  <span className="font-medium">-{depositAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+                <div className="flex justify-between text-orange-600">
+                  <span>Thanh toán khi đến khám:</span>
+                  <span className="font-medium">{remainingAmount.toLocaleString('vi-VN')}đ</span>
+                </div>
+              </>
+            )}
+            <div className="border-t pt-2 mt-2 flex justify-between font-semibold">
+              <span>Tổng cần thanh toán online:</span>
+              <span className="text-blue-600">
+                {paymentMethod === 'cash' ? '0đ' : `${depositAmount.toLocaleString('vi-VN')}đ`}
+              </span>
+            </div>
+          </div>
+        </div>
       )}
 
-      {paymentMethod === 'bank_transfer' && (
-        <BankTransferForm
-          depositAmount={depositAmount}
-          formData={paymentFormData}
-          setFormData={setPaymentFormData}
-        />
-      )}
-
-      {paymentMethod === 'insurance' && (
-        <InsuranceForm
-          formData={paymentFormData}
-          setFormData={setPaymentFormData}
-        />
-      )}
-
+      {/* Cash Payment Info */}
       {paymentMethod === 'cash' && (
-        <div className="mt-4 text-sm bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
-          <p className="font-semibold text-yellow-800 mb-2">
-            ℹ️ Lưu ý thanh toán tiền mặt:
-          </p>
-          <ul className="list-disc list-inside space-y-1 text-yellow-700">
-            <li>Vui lòng mang theo tiền mặt khi đến phòng khám</li>
-            <li>
-              Phí khám:{' '}
-              <strong>{consultationFee.toLocaleString('vi-VN')}đ</strong>
-            </li>
+        <div className="mt-4 text-sm bg-amber-50 border border-amber-200 p-4 rounded-lg">
+          <p className="font-semibold text-amber-800 mb-2">Lưu ý thanh toán tiền mặt:</p>
+          <ul className="list-disc list-inside space-y-1 text-amber-700">
+            <li>Vui lòng mang theo đủ tiền mặt khi đến phòng khám</li>
+            <li>Phí khám: <strong>{consultationFee.toLocaleString('vi-VN')}đ</strong></li>
             <li>Có thể phát sinh thêm chi phí thuốc, xét nghiệm (nếu có)</li>
           </ul>
         </div>
       )}
-    </div>
-  );
-}
 
-/* ===========================
-   CARD PAYMENT FORM
-=========================== */
-function CardPaymentForm({ depositAmount, formData, setFormData }) {
-  const [cardData, setCardData] = useState(
-    formData || {
-      cardNumber: '',
-      cardName: '',
-      expiryDate: '',
-      cvv: '',
-    },
-  );
-
-  useEffect(() => {
-    setFormData(cardData);
-  }, [cardData, setFormData]);
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === 'cardNumber') {
-      const formatted = value
-        .replace(/\s/g, '')
-        .replace(/(\d{4})/g, '$1 ')
-        .trim();
-      setCardData((prev) => ({ ...prev, [name]: formatted }));
-      return;
-    }
-
-    if (name === 'expiryDate') {
-      let formatted = value.replace(/\D/g, '');
-      if (formatted.length >= 2) {
-        formatted = formatted.slice(0, 2) + '/' + formatted.slice(2, 4);
-      }
-      setCardData((prev) => ({ ...prev, [name]: formatted }));
-      return;
-    }
-
-    if (name === 'cvv') {
-      const formatted = value.replace(/\D/g, '').slice(0, 3);
-      setCardData((prev) => ({ ...prev, [name]: formatted }));
-      return;
-    }
-
-    setCardData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  return (
-    <div className="mt-4 bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <CreditCard className="w-5 h-5 text-blue-600" />
-        <h4 className="font-semibold text-gray-800">Thông tin thẻ</h4>
-      </div>
-
-      <div className="bg-white rounded-lg p-4 mb-4">
-        <p className="text-sm text-gray-600 mb-1">Số tiền đặt cọc</p>
-        <p className="text-2xl font-bold text-blue-600">
-          {depositAmount.toLocaleString('vi-VN')}đ
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Số thẻ <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="cardNumber"
-            value={cardData.cardNumber}
-            onChange={handleInputChange}
-            placeholder="1234 5678 9012 3456"
-            maxLength="19"
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Tên trên thẻ <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            name="cardName"
-            value={cardData.cardName}
-            onChange={handleInputChange}
-            placeholder="NGUYEN VAN A"
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none uppercase"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ngày hết hạn <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="expiryDate"
-              value={cardData.expiryDate}
-              onChange={handleInputChange}
-              placeholder="MM/YY"
-              maxLength="5"
-              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              CVV <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="cvv"
-              value={cardData.cvv}
-              onChange={handleInputChange}
-              placeholder="123"
-              maxLength="3"
-              className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 text-xs text-gray-600 flex items-start gap-2 bg-white p-3 rounded-lg">
-        <ShieldCheck className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-        <p>
-          Thông tin thẻ của bạn được mã hóa và bảo mật bởi Stripe. Chúng tôi
-          không lưu trữ thông tin thẻ trên hệ thống.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/* ===========================
-   BANK TRANSFER FORM
-=========================== */
-function BankTransferForm({ depositAmount, formData, setFormData }) {
-  const [selectedBank, setSelectedBank] = useState(
-    formData?.selectedBank || '',
-  );
-
-  useEffect(() => {
-    setFormData({ selectedBank });
-  }, [selectedBank, setFormData]);
-
-  const banks = [
-    { code: 'VCB', name: 'Vietcombank', logo: '🏦' },
-    { code: 'TCB', name: 'Techcombank', logo: '🏦' },
-    { code: 'MB', name: 'MB Bank', logo: '🏦' },
-    { code: 'ACB', name: 'ACB', logo: '🏦' },
-    { code: 'VPB', name: 'VPBank', logo: '🏦' },
-    { code: 'TPB', name: 'TPBank', logo: '🏦' },
-  ];
-
-  return (
-    <div className="mt-4 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Wallet className="w-5 h-5 text-green-600" />
-        <h4 className="font-semibold text-gray-800">Chuyển khoản ngân hàng</h4>
-      </div>
-
-      <div className="bg-white rounded-lg p-4 mb-4">
-        <p className="text-sm text-gray-600 mb-1">Số tiền đặt cọc</p>
-        <p className="text-2xl font-bold text-green-600">
-          {depositAmount.toLocaleString('vi-VN')}đ
-        </p>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Chọn ngân hàng <span className="text-red-500">*</span>
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          {banks.map((bank) => (
-            <button
-              key={bank.code}
-              type="button"
-              onClick={() => setSelectedBank(bank.code)}
-              className={`flex items-center gap-3 p-3 border-2 rounded-lg transition
-                ${
-                  selectedBank === bank.code
-                    ? 'border-green-600 bg-green-50'
-                    : 'border-gray-200 hover:border-green-400'
-                }`}
-            >
-              <span className="text-2xl">{bank.logo}</span>
-              <span className="font-medium text-gray-800">{bank.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedBank && (
-        <div className="bg-white rounded-lg p-4 space-y-3">
-          <h5 className="font-semibold text-gray-800">
-            Thông tin chuyển khoản:
-          </h5>
-
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Ngân hàng:</span>
-              <span className="font-semibold">
-                {banks.find((b) => b.code === selectedBank)?.name}
-              </span>
+      {/* Online Payment Info */}
+      {paymentMethod && paymentMethod !== 'cash' && (
+        <div className="mt-4 text-sm bg-green-50 border border-green-200 p-4 rounded-lg">
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+            <div className="text-green-800">
+              <p className="font-semibold mb-1">Thanh toán an toàn & bảo mật</p>
+              <p className="text-green-700">
+                Đây là thanh toán fake (mô phỏng). Lịch khám sẽ được xác nhận ngay sau khi hoàn tất.
+              </p>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Số tài khoản:</span>
-              <span className="font-semibold">1234567890</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Chủ tài khoản:</span>
-              <span className="font-semibold">Phòng khám ABC</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Nội dung:</span>
-              <span className="font-semibold text-blue-600">
-                DATKHAM [SĐT] [Họ tên]
-              </span>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t text-xs text-gray-600">
-            ⚠️ Sau khi chuyển khoản, vui lòng giữ lại biên lai để đối chiếu.
-            Lịch khám sẽ được xác nhận sau khi chúng tôi nhận được tiền (1-5
-            phút).
           </div>
         </div>
       )}
@@ -720,93 +524,35 @@ function BankTransferForm({ depositAmount, formData, setFormData }) {
 }
 
 /* ===========================
-   INSURANCE FORM
+   REASON INPUT
 =========================== */
-function InsuranceForm({ formData, setFormData }) {
-  const [insuranceData, setInsuranceData] = useState(
-    formData || {
-      insuranceNumber: '',
-      insuranceType: 'bhyt',
-      expiryDate: '',
-    },
-  );
+function ReasonInput({ reason, onChange }) {
+  const handleChange = (e) => onChange(e.target.value);
 
-  useEffect(() => {
-    setFormData(insuranceData);
-  }, [insuranceData, setFormData]);
-
-  const handleChange = (field, value) => {
-    setInsuranceData((prev) => ({ ...prev, [field]: value }));
+  const handleBlur = () => {
+    const booking = JSON.parse(localStorage.getItem('booking') || '{}');
+    booking.reason = reason;
+    localStorage.setItem('booking', JSON.stringify(booking));
   };
 
   return (
-    <div className="mt-4 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-xl p-6">
+    <div className="bg-white border-2 border-gray-200 rounded-xl p-6 mb-6">
       <div className="flex items-center gap-2 mb-4">
-        <ShieldCheck className="w-5 h-5 text-purple-600" />
-        <h4 className="font-semibold text-gray-800">Thông tin bảo hiểm y tế</h4>
+        <FileText className="w-5 h-5 text-blue-600" />
+        <h3 className="font-semibold text-lg text-gray-800">Lý do khám bệnh</h3>
+        <span className="text-xs text-gray-500">(không bắt buộc)</span>
       </div>
-
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
-        <p className="text-sm font-semibold text-green-800 mb-1">
-          ✓ Miễn phí đặt cọc
-        </p>
-        <p className="text-xs text-green-700">
-          Sử dụng bảo hiểm y tế không cần đặt cọc trước. Vui lòng mang theo thẻ
-          BHYT khi đến khám.
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Loại bảo hiểm <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={insuranceData.insuranceType}
-            onChange={(e) => handleChange('insuranceType', e.target.value)}
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-          >
-            <option value="bhyt">BHYT (Bảo hiểm y tế)</option>
-            <option value="private">Bảo hiểm tư nhân</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Số thẻ bảo hiểm <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={insuranceData.insuranceNumber}
-            onChange={(e) =>
-              handleChange('insuranceNumber', e.target.value.toUpperCase())
-            }
-            placeholder="VD: DN1234567890123"
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none uppercase"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ngày hết hạn <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="date"
-            value={insuranceData.expiryDate}
-            onChange={(e) => handleChange('expiryDate', e.target.value)}
-            className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-          />
-        </div>
-      </div>
-
-      <div className="mt-4 text-xs text-gray-600 bg-white rounded-lg p-3">
-        <p className="font-semibold mb-2">📋 Lưu ý:</p>
-        <ul className="list-disc list-inside space-y-1">
-          <li>Vui lòng mang theo thẻ BHYT gốc khi đến khám</li>
-          <li>Chi phí được thanh toán theo quy định BHYT hiện hành</li>
-          <li>Một số dịch vụ có thể không được BHYT chi trả</li>
-        </ul>
-      </div>
+      <textarea
+        value={reason}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        rows="3"
+        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none transition-colors"
+        placeholder="Mô tả triệu chứng hoặc lý do khám bệnh (ví dụ: Đau đầu, sốt cao 3 ngày...)"
+      />
+      <p className="mt-2 text-sm text-gray-500">
+        Thông tin này giúp bác sĩ nắm được tình trạng sức khỏe của bạn trước khi khám.
+      </p>
     </div>
   );
 }

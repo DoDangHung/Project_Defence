@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 import TableContent from '../table/TableContent.jsx';
 
 const ManageUser = () => {
+  const { t } = useTranslation();
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -53,25 +55,25 @@ const ManageUser = () => {
         setLoading(false);
       });
   }, []);
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (loading) return <div>{t('common.loading')}</div>;
+  if (error) return <div>{t('common.error')}: {error}</div>;
 
   return (
     <TableContent
-      title="Users Management"
+      title={t('users.title')}
       columns={[
         'ID',
-        'First Name',
-        'Last Name',
-        'Email',
-        'Gender',
-        'Street Address',
-        'City',
-        'State',
-        'Postal-Code',
-        'PhoneNumber',
-        'Role',
-        'Status',
+        t('users.firstName'),
+        t('users.lastName'),
+        t('common.email'),
+        t('users.gender'),
+        t('users.streetAddress'),
+        t('users.city'),
+        t('users.state'),
+        t('users.postalCode'),
+        t('users.phone'),
+        t('common.role'),
+        t('common.status'),
       ]}
       data={data}
       onView={handleView}

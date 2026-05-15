@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+/** @format */
+
+import React, { useEffect, useRef, useState } from "react";
+import { ChevronRight, ChevronLeft } from "lucide-react";
 function ServiceSections() {
   const serviceSliderRef = useRef(null);
   const [currentServiceSlide, setCurrentServiceSlide] = useState(0);
@@ -7,50 +9,50 @@ function ServiceSections() {
   const [currentDoctorSlide, setCurrentDoctorSlide] = useState(0);
 
   const services = [
-    { id: 1, name: 'Khám Tổng Quát', icon: '🏥', price: '500.000đ' },
-    { id: 2, name: 'Nha Khoa', icon: '🦷', price: '300.000đ' },
-    { id: 3, name: 'Tim Mạch', icon: '❤️', price: '800.000đ' },
-    { id: 4, name: 'Da Liễu', icon: '✨', price: '400.000đ' },
-    { id: 5, name: 'Tai Mũi Họng', icon: '👂', price: '350.000đ' },
-    { id: 6, name: 'Mắt', icon: '👁️', price: '450.000đ' },
+    { id: 1, name: "General Examination", icon: "🏥", price: "500.000đ" },
+    { id: 2, name: "Dental Examination", icon: "🦷", price: "300.000đ" },
+    { id: 3, name: "Cardiology Examination", icon: "❤️", price: "800.000đ" },
+    { id: 4, name: "Dermatology Examination", icon: "✨", price: "400.000đ" },
+    { id: 5, name: "ENT Examination", icon: "👂", price: "350.000đ" },
+    { id: 6, name: "Ophthalmology Examination", icon: "👁️", price: "450.000đ" },
   ];
 
   const doctors = [
     {
       id: 1,
-      name: 'BS. Nguyễn Văn A',
-      specialty: 'Tim Mạch',
+      name: "Dr. John Doe",
+      specialty: "Tim Mạch",
       rating: 4.9,
       patients: 1250,
       image:
-        'https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2Fe4549b5e-15d0-4656-8157-ad47e269f42b-bs_ngaa_trung_nam.jpg&w=384&q=75',
+        "https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2Fe4549b5e-15d0-4656-8157-ad47e269f42b-bs_ngaa_trung_nam.jpg&w=384&q=75",
     },
     {
       id: 2,
-      name: 'BS. Trần Thị B',
-      specialty: 'Nha Khoa',
+      name: "BS. Trần Thị B",
+      specialty: "Dental Examination",
       rating: 4.8,
       patients: 980,
       image:
-        'https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2F82fa2843-dba3-48d1-ae5f-4600238afcec-sa.jpg&w=384&q=75',
+        "https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2F82fa2843-dba3-48d1-ae5f-4600238afcec-sa.jpg&w=384&q=75",
     },
     {
       id: 3,
-      name: 'BS. Lê Văn C',
-      specialty: 'Da Liễu',
+      name: "BS. Lê Văn C",
+      specialty: "Da Liễu",
       rating: 4.7,
       patients: 850,
       image:
-        'https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2Fb7d5a8fb-c628-4a40-94a2-91def4bfcb17-thiaaoat_kaaoa_chaaa_caa_taaan_(2).png&w=384&q=75',
+        "https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2Fb7d5a8fb-c628-4a40-94a2-91def4bfcb17-thiaaoat_kaaoa_chaaa_caa_taaan_(2).png&w=384&q=75",
     },
     {
       id: 4,
-      name: 'BS. Phạm Thị D',
-      specialty: 'Tai Mũi Họng',
+      name: "BS. Phạm Thị D",
+      specialty: "Tai Mũi Họng",
       rating: 4.9,
       patients: 1100,
       image:
-        'https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2F20af7575-df2e-4224-b40d-36055b476ba6-do-dang-khoa.webp&w=384&q=75',
+        "https://medpro.vn/_next/image?url=https%3A%2F%2Fcdn.medpro.vn%2Fprod-partner%2F20af7575-df2e-4224-b40d-36055b476ba6-do-dang-khoa.webp&w=384&q=75",
     },
   ];
   // Auto play slider
@@ -178,8 +180,8 @@ function ServiceSections() {
                   }}
                   className={`h-3 rounded-full transition-all ${
                     currentServiceSlide === index
-                      ? 'w-8 bg-blue-600'
-                      : 'w-3 bg-gray-300'
+                      ? "w-8 bg-blue-600"
+                      : "w-3 bg-gray-300"
                   }`}
                 />
               ),
@@ -196,10 +198,10 @@ function ServiceSections() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            'BS CKII Ngô Trung Nam',
-            'BS CKI Vũ Thị Hà',
-            'ThS.BS Lê Hoàng Thiên',
-            'BS CKI Đỗ Đăng Khoa',
+            "BS CKII Ngô Trung Nam",
+            "BS CKI Vũ Thị Hà",
+            "ThS.BS Lê Hoàng Thiên",
+            "BS CKI Đỗ Đăng Khoa",
           ].map((item, i) => (
             <div
               key={i}
@@ -213,7 +215,7 @@ function ServiceSections() {
                 />
               </div>
               <h3 className="font-semibold text-sm">{item}</h3>
-              <p className="text-xs text-gray-500">Bác sĩ chuyên khoa</p>
+              <p className="text-xs text-gray-500">Specialty Examination</p>
               <p className="text-sm text-orange-500 my-2">★★★★☆</p>
               <button className="w-full bg-sky-600 text-white py-2 rounded">
                 Tư vấn ngay
@@ -237,10 +239,10 @@ function ServiceSections() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            'Gói khám mắt tổng quát',
-            'Gói khám tiểu đường',
-            'Gói khám sức khỏe lao động',
-            'Bệnh lây qua đường tình dục',
+            "Gói khám mắt tổng quát",
+            "Gói khám tiểu đường",
+            "Gói khám sức khỏe lao động",
+            "Bệnh lây qua đường tình dục",
           ].map((item, i) => (
             <div
               key={i}
@@ -254,7 +256,7 @@ function ServiceSections() {
               <div className="p-4">
                 <h3 className="font-semibold text-sm">{item}</h3>
                 <p className="text-xs text-gray-500 mt-1">
-                  Phòng khám chuyên khoa
+                  Specialty Examination
                 </p>
               </div>
             </div>
